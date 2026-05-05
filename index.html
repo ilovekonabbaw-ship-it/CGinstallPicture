@@ -162,6 +162,33 @@ table tr:hover td { background: #FAFBFD; }
 .filter-bar select, .filter-bar input { padding: 8px 10px; font-size: 14px; border: 1px solid #E0E4EA; border-radius: 6px; }
 
 .actions { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* Browser cards */
+.browser-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #E0E4EA; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; background: white; }
+.browser-row:hover { border-color: #1D9E75; background: #F0F9F5; }
+.browser-row .icon { font-size: 22px; }
+.browser-row .info { flex: 1; min-width: 0; }
+.browser-row .info .name { font-weight: 500; font-size: 14px; }
+.browser-row .info .sub { font-size: 12px; color: #888; margin-top: 2px; }
+.browser-row .arrow { color: #888; font-size: 18px; }
+.browser-row .count-badge { background: #185FA5; color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #888; margin-bottom: 12px; flex-wrap: wrap; }
+.breadcrumb .crumb { cursor: pointer; color: #185FA5; text-decoration: underline; }
+.breadcrumb .crumb:hover { color: #0C447C; }
+.breadcrumb .sep { color: #C7CFD9; }
+
+.visit-photo-card { display: grid; grid-template-columns: 100px 1fr auto; gap: 12px; padding: 10px; border: 1px solid #E0E4EA; border-radius: 8px; margin-bottom: 8px; align-items: center; }
+.visit-photo-card img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; cursor: pointer; }
+.visit-photo-card .vinfo { font-size: 13px; }
+.visit-photo-card .vinfo .vdate { font-weight: 600; font-size: 14px; }
+.visit-photo-card .vinfo .vnote { color: #666; margin-top: 2px; font-size: 12px; }
+.visit-photo-card .vactions { display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 600px) {
+  .visit-photo-card { grid-template-columns: 80px 1fr; }
+  .visit-photo-card img { width: 80px; height: 80px; }
+  .visit-photo-card .vactions { grid-column: 1 / -1; flex-direction: row; }
+}
 </style>
 </head>
 <body>
@@ -207,6 +234,14 @@ table tr:hover td { background: #FAFBFD; }
       <div class="card">
         <h2>👥 สถานะการเยี่ยมของ CG รายเดือน</h2>
         <div id="dashCgList"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <h2>📂 ดูข้อมูลที่บันทึก</h2>
+          <div style="font-size:13px;color:#888;">คลิกเพื่อดูรายละเอียด</div>
+        </div>
+        <div id="dashBrowser"></div>
       </div>
     </div>
 
@@ -473,6 +508,47 @@ table tr:hover td { background: #FAFBFD; }
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('dateModal')">ยกเลิก</button>
       <button class="btn btn-primary" onclick="confirmDatePicker()">✓ ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- MODAL: VISIT DETAIL          -->
+<!-- ============================ -->
+<div class="modal" id="visitDetailModal">
+  <div class="modal-content" style="max-width:700px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 id="visitDetailTitle">รายละเอียดการเยี่ยม</h3>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('visitDetailModal')">✕ ปิด</button>
+    </div>
+    <div id="visitDetailContent"></div>
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- MODAL: EDIT SINGLE VISIT     -->
+<!-- ============================ -->
+<div class="modal" id="editVisitModal">
+  <div class="modal-content" style="max-width:480px;">
+    <h3>✏️ แก้ไขรายการเยี่ยม</h3>
+    <input type="hidden" id="editVisitId">
+    <div id="editVisitPreview" style="text-align:center;margin-bottom:14px;"></div>
+    <div class="field">
+      <label>วันที่เยี่ยม</label>
+      <input type="date" id="editVisitDate">
+    </div>
+    <div class="field">
+      <label>หมายเหตุ</label>
+      <textarea id="editVisitNote"></textarea>
+    </div>
+    <div class="field">
+      <label>เปลี่ยนรูปใหม่ (ไม่บังคับ)</label>
+      <input type="file" id="editVisitPhoto" accept="image/*">
+      <div class="hint">เลือกถ้าต้องการเปลี่ยนรูป — ถ้าไม่เลือก ใช้รูปเดิม</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('editVisitModal')">ยกเลิก</button>
+      <button class="btn btn-primary" id="editVisitSaveBtn" onclick="saveEditVisit()">บันทึก</button>
     </div>
   </div>
 </div>
@@ -1257,6 +1333,280 @@ function loadDashboard() {
   });
   html += '</tbody></table></div>';
   div.innerHTML = html;
+
+  // Re-render browser too
+  renderBrowser();
+}
+
+// ============================================
+// BROWSE / EDIT / DELETE VISITS
+// ============================================
+let browserState = { level: 'cg', cgCode: null, elderlyId: null };
+
+function renderBrowser() {
+  const div = document.getElementById('dashBrowser');
+  if (!div) return;
+  const month = parseInt(document.getElementById('dashMonth').value);
+  const year = parseInt(document.getElementById('dashYear').value);
+
+  const monthVisits = allVisits.filter(v => {
+    if (!v.visitDate) return false;
+    const d = new Date(v.visitDate);
+    return d.getFullYear() === year && (d.getMonth() + 1) === month;
+  });
+
+  if (browserState.level === 'cg') {
+    renderBrowserCgLevel(div, monthVisits);
+  } else if (browserState.level === 'elderly') {
+    renderBrowserElderlyLevel(div, monthVisits);
+  } else if (browserState.level === 'visits') {
+    renderBrowserVisitsLevel(div, monthVisits);
+  }
+}
+
+function renderBrowserCgLevel(div, monthVisits) {
+  const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
+  const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
+
+  // Group by CG
+  const byCg = {};
+  monthVisits.forEach(v => {
+    if (!byCg[v.cgCode]) byCg[v.cgCode] = { cgCode: v.cgCode, cgName: v.cgName, count: 0, elderlySet: new Set() };
+    byCg[v.cgCode].count++;
+    byCg[v.cgCode].elderlySet.add(v.elderlyId);
+  });
+
+  let html = `<div class="breadcrumb"><span style="font-weight:500;">📁 ${monthName} ${buddhistYear}</span></div>`;
+
+  if (Object.keys(byCg).length === 0) {
+    html += '<div class="empty"><div class="icon">📭</div>ยังไม่มีข้อมูลบันทึกในเดือนนี้</div>';
+  } else {
+    Object.values(byCg).forEach(item => {
+      html += `<div class="browser-row" onclick="enterBrowserCG('${item.cgCode}')">
+        <div class="icon">👤</div>
+        <div class="info">
+          <div class="name">${item.cgName}</div>
+          <div class="sub">${item.elderlySet.size} ผู้สูงอายุ • ${item.count} รูป</div>
+        </div>
+        <div class="count-badge">${item.count}</div>
+        <div class="arrow">›</div>
+      </div>`;
+    });
+  }
+  div.innerHTML = html;
+}
+
+function renderBrowserElderlyLevel(div, monthVisits) {
+  const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
+  const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
+  const cg = allCGs.find(c => c.code === browserState.cgCode);
+
+  const cgVisits = monthVisits.filter(v => v.cgCode === browserState.cgCode);
+  const byElderly = {};
+  cgVisits.forEach(v => {
+    if (!byElderly[v.elderlyId]) {
+      const el = allElderly.find(e => e.id === v.elderlyId);
+      byElderly[v.elderlyId] = {
+        elderlyId: v.elderlyId,
+        elderlyName: v.elderlyName,
+        pdfMode: el ? el.pdfMode : 'normal',
+        count: 0
+      };
+    }
+    byElderly[v.elderlyId].count++;
+  });
+
+  let html = `<div class="breadcrumb">
+    <span class="crumb" onclick="exitBrowser()">📁 ${monthName} ${buddhistYear}</span>
+    <span class="sep">›</span>
+    <span style="font-weight:500;">${cg ? cg.name : '-'}</span>
+  </div>`;
+
+  if (Object.keys(byElderly).length === 0) {
+    html += '<div class="empty">ไม่มีข้อมูล</div>';
+  } else {
+    Object.values(byElderly).forEach(item => {
+      const modeBadge = item.pdfMode === 'obt'
+        ? '<span class="badge badge-purple" style="margin-left:6px;">อบต.</span>'
+        : '<span class="badge badge-info" style="margin-left:6px;">ปกติ</span>';
+      html += `<div class="browser-row" onclick="enterBrowserElderly('${item.elderlyId}')">
+        <div class="icon">👴</div>
+        <div class="info">
+          <div class="name">${item.elderlyName}${modeBadge}</div>
+          <div class="sub">${item.count} ครั้งที่บันทึก</div>
+        </div>
+        <div class="count-badge">${item.count}</div>
+        <div class="arrow">›</div>
+      </div>`;
+    });
+  }
+  div.innerHTML = html;
+}
+
+function renderBrowserVisitsLevel(div, monthVisits) {
+  const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
+  const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
+  const cg = allCGs.find(c => c.code === browserState.cgCode);
+  const elderly = allElderly.find(e => e.id === browserState.elderlyId);
+
+  const visits = monthVisits
+    .filter(v => v.cgCode === browserState.cgCode && v.elderlyId === browserState.elderlyId)
+    .sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
+
+  let html = `<div class="breadcrumb">
+    <span class="crumb" onclick="exitBrowser()">📁 ${monthName} ${buddhistYear}</span>
+    <span class="sep">›</span>
+    <span class="crumb" onclick="enterBrowserCG('${browserState.cgCode}')">${cg ? cg.name : '-'}</span>
+    <span class="sep">›</span>
+    <span style="font-weight:500;">${elderly ? elderly.name : '-'}</span>
+  </div>`;
+
+  if (visits.length === 0) {
+    html += '<div class="empty">ไม่มีข้อมูล</div>';
+  } else {
+    html += `<div style="margin-bottom:10px;font-size:13px;color:#666;">รวม ${visits.length} รายการ — เรียงตามวันที่</div>`;
+    visits.forEach(v => {
+      const dateStr = formatThaiDateShort(v.visitDate);
+      html += `<div class="visit-photo-card">
+        <img src="${v.photoUrl}" onclick="window.open('${v.photoUrl}', '_blank')" alt="">
+        <div class="vinfo">
+          <div class="vdate">📅 ${dateStr}</div>
+          ${v.note ? `<div class="vnote">📝 ${v.note}</div>` : ''}
+          <div class="vnote" style="font-size:11px;color:#aaa;margin-top:4px;">บันทึกเมื่อ ${formatThaiDateTime(v.recordedAt)}</div>
+        </div>
+        <div class="vactions">
+          <button class="btn btn-secondary btn-sm" onclick="openEditVisit('${v.id}')">✏️ แก้ไข</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteVisit('${v.id}')">🗑 ลบ</button>
+        </div>
+      </div>`;
+    });
+  }
+  div.innerHTML = html;
+}
+
+function enterBrowserCG(cgCode) {
+  browserState = { level: 'elderly', cgCode: cgCode, elderlyId: null };
+  renderBrowser();
+}
+
+function enterBrowserElderly(elderlyId) {
+  browserState = { level: 'visits', cgCode: browserState.cgCode, elderlyId: elderlyId };
+  renderBrowser();
+}
+
+function exitBrowser() {
+  browserState = { level: 'cg', cgCode: null, elderlyId: null };
+  renderBrowser();
+}
+
+// ============================================
+// EDIT VISIT
+// ============================================
+let editVisitNewPhoto = null;
+
+function openEditVisit(visitId) {
+  const v = allVisits.find(x => x.id === visitId);
+  if (!v) return;
+  document.getElementById('editVisitId').value = visitId;
+  document.getElementById('editVisitDate').value = v.visitDate;
+  document.getElementById('editVisitNote').value = v.note || '';
+  document.getElementById('editVisitPhoto').value = '';
+  editVisitNewPhoto = null;
+  document.getElementById('editVisitPreview').innerHTML = `
+    <img src="${v.photoUrl}" style="max-width:200px;max-height:200px;border-radius:8px;border:1px solid #ddd;">
+    <div style="font-size:12px;color:#888;margin-top:4px;">รูปปัจจุบัน</div>
+  `;
+  document.getElementById('editVisitModal').classList.add('show');
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'editVisitPhoto') {
+    const file = e.target.files[0];
+    if (!file) { editVisitNewPhoto = null; return; }
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const maxSize = 1200;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+        else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        editVisitNewPhoto = { base64: dataUrl.split(',')[1] };
+        document.getElementById('editVisitPreview').innerHTML = `
+          <img src="${dataUrl}" style="max-width:200px;max-height:200px;border-radius:8px;border:2px solid #1D9E75;">
+          <div style="font-size:12px;color:#1D9E75;margin-top:4px;font-weight:500;">✓ รูปใหม่ (จะแทนที่รูปเดิม)</div>
+        `;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+async function saveEditVisit() {
+  const visitId = document.getElementById('editVisitId').value;
+  const v = allVisits.find(x => x.id === visitId);
+  if (!v) return;
+
+  const newDate = document.getElementById('editVisitDate').value;
+  const newNote = document.getElementById('editVisitNote').value;
+
+  if (!newDate) { alert('กรุณาใส่วันที่'); return; }
+
+  const btn = document.getElementById('editVisitSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+
+  try {
+    const updates = { visitDate: newDate, note: newNote };
+
+    // ถ้ามีรูปใหม่ ให้อัปโหลด
+    if (editVisitNewPhoto) {
+      btn.textContent = 'กำลังอัปโหลดรูป...';
+      const newUrl = await uploadToImgBB(editVisitNewPhoto.base64);
+      updates.photoUrl = newUrl;
+    }
+
+    await firebaseDB.ref('visits/' + visitId).update(updates);
+    showToast('✓ แก้ไขสำเร็จ');
+    closeModal('editVisitModal');
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'บันทึก';
+  }
+}
+
+function confirmDeleteVisit(visitId) {
+  const v = allVisits.find(x => x.id === visitId);
+  if (!v) return;
+  const dateStr = formatThaiDateShort(v.visitDate);
+  showConfirm('🗑', 'ลบรายการเยี่ยมนี้?', `${v.elderlyName} วันที่ ${dateStr}\nรูปและข้อมูลจะหายถาวร`, async function() {
+    try {
+      await firebaseDB.ref('visits/' + visitId).remove();
+      showToast('ลบสำเร็จ');
+    } catch (e) {
+      alert('เกิดข้อผิดพลาด: ' + e.message);
+    }
+  });
+}
+
+function formatThaiDateTime(isoStr) {
+  if (!isoStr) return '-';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '-';
+  const day = d.getDate();
+  const month = THAI_MONTHS_SHORT[d.getMonth() + 1];
+  const year = (d.getFullYear() + 543).toString().slice(-2);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year} ${hh}:${mm}`;
 }
 
 // ============================================

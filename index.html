@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ระบบบันทึกการเยี่ยมผู้สูงอายุ - รพ.สต.ทับทิมสยาม 07</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<!-- jsPDF + html2canvas สำหรับสร้าง PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; font-size: 15px; line-height: 1.5; }
+
+/* Header */
+.header { background: linear-gradient(135deg, #1D9E75 0%, #0F6E56 100%); color: white; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.header h1 { font-size: 18px; font-weight: 600; margin-bottom: 2px; }
+.header p { font-size: 12px; opacity: 0.9; }
+
+/* Layout */
+.container { max-width: 1200px; margin: 0 auto; padding: 14px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; background: white; border-radius: 10px; padding: 4px; margin-bottom: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tab { padding: 10px 16px; border-radius: 7px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
+.tab.active { background: #1D9E75; color: white; }
+.tab:hover:not(.active) { background: #F0F0F0; }
+
+/* Cards */
+.card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.card h2 { font-size: 17px; font-weight: 600; margin-bottom: 12px; color: #2C2C2A; }
+.card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #555; }
+
+/* Stats */
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.stat { background: linear-gradient(135deg, #F8F9FB 0%, #EEF1F5 100%); padding: 14px; border-radius: 10px; }
+.stat .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+.stat .value { font-size: 26px; font-weight: 600; line-height: 1.2; }
+.stat .sub { font-size: 11px; color: #888; }
+.stat.success .value { color: #0F6E56; }
+.stat.warning .value { color: #BA7517; }
+.stat.info .value { color: #185FA5; }
+.stat.danger .value { color: #D85A30; }
+
+/* Form */
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 500; }
+.field input, .field select, .field textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E4EA; border-radius: 8px; font-size: 15px; font-family: inherit; background: white; color: #2C2C2A; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #1D9E75; box-shadow: 0 0 0 3px rgba(29,158,117,0.1); }
+.field textarea { resize: vertical; min-height: 60px; }
+.field .hint { font-size: 12px; color: #888; margin-top: 4px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+@media (max-width: 600px) { .row, .row-3 { grid-template-columns: 1fr; } }
+
+/* Buttons */
+.btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-primary { background: #1D9E75; color: white; }
+.btn-primary:hover { background: #0F6E56; }
+.btn-success { background: #185FA5; color: white; }
+.btn-success:hover { background: #0C447C; }
+.btn-danger { background: #D85A30; color: white; }
+.btn-danger:hover { background: #9C3F1E; }
+.btn-secondary { background: #F1EFE8; color: #2C2C2A; }
+.btn-secondary:hover { background: #E5E2D8; }
+.btn-sm { padding: 6px 10px; font-size: 13px; }
+.btn-lg { padding: 14px 20px; font-size: 16px; width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; }
+table th, table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #F0F0F0; font-size: 14px; }
+table th { background: #F8F9FB; font-weight: 600; color: #555; font-size: 13px; }
+table tr:hover td { background: #FAFBFD; }
+.table-responsive { overflow-x: auto; }
+
+/* Badges */
+.badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.badge-success { background: #EAF3DE; color: #173404; }
+.badge-warning { background: #FAEEDA; color: #412402; }
+.badge-info { background: #E6F1FB; color: #042C53; }
+.badge-purple { background: #E8E3F8; color: #4527A0; }
+.badge-gray { background: #ECECEC; color: #555; }
+
+/* Progress */
+.progress { background: #F0F0F0; border-radius: 4px; height: 6px; overflow: hidden; margin-top: 4px; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #1D9E75, #34C896); transition: width 0.4s; }
+
+/* Alerts */
+.alert { padding: 12px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
+.alert-success { background: #EAF3DE; color: #173404; border: 1px solid #D4E5C0; }
+.alert-error { background: #FCEBEB; color: #501313; border: 1px solid #F4C2C2; }
+.alert-warning { background: #FAEEDA; color: #412402; border: 1px solid #F0DCB4; }
+.alert-info { background: #E6F1FB; color: #042C53; border: 1px solid #BFD9F0; }
+
+/* Modal */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.modal.show { display: flex; }
+.modal-content { background: white; border-radius: 12px; padding: 20px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; }
+.modal-content h3 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* Confirm dialog */
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+.confirm-overlay.show { display: flex; }
+.confirm-box { background: white; border-radius: 12px; padding: 24px; max-width: 380px; width: 100%; text-align: center; }
+.confirm-icon { font-size: 40px; margin-bottom: 12px; }
+.confirm-msg { font-size: 16px; margin-bottom: 8px; font-weight: 500; }
+.confirm-sub { font-size: 13px; color: #888; margin-bottom: 20px; }
+.confirm-actions { display: flex; gap: 8px; }
+.confirm-actions .btn { flex: 1; }
+
+/* Loading */
+.loading { text-align: center; padding: 40px 20px; }
+.spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #E0E4EA; border-top-color: #1D9E75; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty */
+.empty { text-align: center; padding: 40px 20px; color: #888; font-size: 14px; }
+.empty .icon { font-size: 40px; margin-bottom: 8px; opacity: 0.4; }
+
+/* Toast */
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2C2C2A; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 3000; animation: slideUp 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+@keyframes slideUp { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+/* Photo preview */
+.photo-area { border: 2px dashed #C7CFD9; border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #FAFBFD; }
+.photo-area:hover { border-color: #1D9E75; background: #F0F9F5; }
+.photo-area input[type="file"] { display: none; }
+.photo-area .icon { font-size: 36px; margin-bottom: 8px; }
+.photo-area .text { font-size: 14px; color: #666; }
+.photo-area .hint { font-size: 12px; color: #999; margin-top: 4px; }
+
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
+.photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #f0f0f0; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.photo-item img { width: 100%; height: 100%; object-fit: cover; }
+.photo-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(220,53,69,0.95); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; line-height: 1; }
+.photo-item .date-tag { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; font-size: 11px; padding: 3px; text-align: center; }
+
+/* Date chips */
+.date-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.date-chip { padding: 6px 10px; background: #F0F9F5; color: #0F6E56; border-radius: 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #C5E5D2; }
+.date-chip .x { cursor: pointer; opacity: 0.6; font-weight: bold; }
+.date-chip .x:hover { opacity: 1; color: #D85A30; }
+
+/* Setup screen */
+.setup-screen { max-width: 500px; margin: 40px auto; padding: 24px; }
+.setup-screen .card { padding: 24px; }
+.setup-screen h2 { font-size: 20px; margin-bottom: 16px; text-align: center; }
+
+/* Hide for screen */
+.hidden { display: none !important; }
+
+/* Filter */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.filter-bar select, .filter-bar input { padding: 8px 10px; font-size: 14px; border: 1px solid #E0E4EA; border-radius: 6px; }
+
+.actions { display: flex; gap: 4px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<!-- ============================ -->
+<!-- MAIN APP                     -->
+<!-- ============================ -->
+<div id="mainApp">
+
+  <div class="header">
+    <h1>📋 ระบบบันทึกการเยี่ยมผู้สูงอายุ</h1>
+    <p>รพ.สต.ทับทิมสยาม 07 ต.บักดอง อ.ขุนหาญ จ.ศรีสะเกษ</p>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" data-tab="dashboard">📊 ภาพรวม</div>
+      <div class="tab" data-tab="record">📷 บันทึกการเยี่ยม</div>
+      <div class="tab" data-tab="cg">👥 จัดการ CG</div>
+      <div class="tab" data-tab="elderly">👴 จัดการผู้สูงอายุ</div>
+      <div class="tab" data-tab="report">📄 สร้าง PDF</div>
+    </div>
+
+    <!-- =============== TAB: DASHBOARD =============== -->
+    <div id="tab-dashboard" class="tab-content">
+      <div class="filter-bar">
+        <span style="font-weight:500;">เดือน:</span>
+        <select id="dashMonth"></select>
+        <select id="dashYear"></select>
+        <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">🔄 รีเฟรช</button>
+      </div>
+
+      <div class="card">
+        <h2>📈 ภาพรวมรายเดือน</h2>
+        <div id="dashStats"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+
+      <div class="card">
+        <h2>📊 สถิติรวมทั้งหมด</h2>
+        <div id="dashTotal"></div>
+      </div>
+
+      <div class="card">
+        <h2>👥 สถานะการเยี่ยมของ CG รายเดือน</h2>
+        <div id="dashCgList"></div>
+      </div>
+    </div>
+
+    <!-- =============== TAB: RECORD =============== -->
+    <div id="tab-record" class="tab-content hidden">
+      <div class="card">
+        <h2>📷 บันทึกการเยี่ยมผู้สูงอายุ</h2>
+        <div id="recordAlert"></div>
+
+        <div class="row">
+          <div class="field">
+            <label>1. เลือก CG *</label>
+            <select id="recCG" onchange="onRecCGChange()">
+              <option value="">-- เลือก CG --</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>2. เลือกผู้สูงอายุ *</label>
+            <select id="recElderly" onchange="onRecElderlyChange()">
+              <option value="">-- เลือก CG ก่อน --</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="recElderlyInfo" class="alert alert-info hidden"></div>
+
+        <div class="row">
+          <div class="field">
+            <label>3. เดือน/ปี</label>
+            <div style="display:flex;gap:6px;">
+              <select id="recMonth" style="flex:1;"></select>
+              <select id="recYear" style="flex:1;"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label>4. จำนวนวันที่เยี่ยม *</label>
+            <input type="number" id="recDayCount" min="1" max="31" placeholder="เช่น 4 หรือ 11">
+            <div class="hint">แบบปกติ ~4 วัน, แบบ อบต. ~10-12 วัน</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>5. เลือกวันที่เยี่ยม</label>
+          <button class="btn btn-secondary btn-sm" onclick="openDatePicker()">📅 เลือกวันที่</button>
+          <div id="selectedDates" class="date-chips"></div>
+          <div class="hint" id="datesHint">เลือกวันที่ในเดือนที่ระบุ ตามจำนวนที่ใส่ไว้</div>
+        </div>
+
+        <div class="field">
+          <label>6. อัปโหลดรูป *</label>
+          <label class="photo-area" for="recPhotoInput">
+            <div class="icon">📷</div>
+            <div class="text">แตะเพื่อถ่ายหรือเลือกรูป</div>
+            <div class="hint" id="photoHint">เลือกรูปจำนวนเท่ากับวันที่ (ระบบจะสุ่มจับคู่ให้)</div>
+          </label>
+          <input type="file" id="recPhotoInput" accept="image/*" multiple>
+          <div id="recPhotoList" class="photo-grid"></div>
+        </div>
+
+        <div class="field">
+          <label>7. หมายเหตุ (ไม่บังคับ)</label>
+          <textarea id="recNote" placeholder="เช่น สังเกตอาการ, การให้คำแนะนำ"></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-lg" id="recSubmitBtn" onclick="submitRecord()">💾 บันทึกข้อมูล</button>
+      </div>
+    </div>
+
+    <!-- =============== TAB: CG =============== -->
+    <div id="tab-cg" class="tab-content hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <h2>👥 รายชื่อ CG</h2>
+          <button class="btn btn-primary" onclick="openCGModal()">+ เพิ่ม CG</button>
+        </div>
+        <div id="cgTable" class="table-responsive"></div>
+      </div>
+    </div>
+
+    <!-- =============== TAB: ELDERLY =============== -->
+    <div id="tab-elderly" class="tab-content hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <h2>👴 รายชื่อผู้สูงอายุ</h2>
+          <button class="btn btn-primary" onclick="openElderlyModal()">+ เพิ่มผู้สูงอายุ</button>
+        </div>
+        <div class="filter-bar">
+          <label>กรองตาม CG:</label>
+          <select id="filterCG" onchange="renderElderlyTable()">
+            <option value="">-- ทั้งหมด --</option>
+          </select>
+          <label>โหมด PDF:</label>
+          <select id="filterMode" onchange="renderElderlyTable()">
+            <option value="">-- ทั้งหมด --</option>
+            <option value="normal">แบบปกติ (4 รูป)</option>
+            <option value="obt">แบบ อบต. (10-12 รูป)</option>
+          </select>
+        </div>
+        <div id="elderlyTable" class="table-responsive"></div>
+      </div>
+    </div>
+
+    <!-- =============== TAB: REPORT =============== -->
+    <div id="tab-report" class="tab-content hidden">
+      <div class="card">
+        <h2>📄 สร้าง PDF สรุปการเยี่ยมรายเดือน</h2>
+        <div id="reportAlert"></div>
+        <div class="row-3">
+          <div class="field">
+            <label>เดือน</label>
+            <select id="rptMonth"></select>
+          </div>
+          <div class="field">
+            <label>ปี (พ.ศ.)</label>
+            <select id="rptYear"></select>
+          </div>
+          <div class="field">
+            <label>กรอง CG (ไม่จำเป็น)</label>
+            <select id="rptCG">
+              <option value="">-- ทั้งหมด --</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-success btn-lg" id="rptBtn" onclick="generatePDF()">📄 สร้าง PDF</button>
+        <div id="rptResult" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>📋 ตัวอย่างรายงานที่จะสร้าง</h3>
+        <div class="alert alert-info">
+          <strong>แบบปกติ (4 รูป/หน้า):</strong> สำหรับผู้สูงอายุที่เยี่ยมเดือนละ ~4 ครั้ง<br>
+          <strong>แบบ อบต. (10-12 รูป/หน้า):</strong> สำหรับผู้สูงอายุที่เยี่ยมเดือนละ 10-12 ครั้ง พร้อมแสดงวันที่เป็น "วันที่ 1,4,6,8,..."<br>
+          <small style="color:#888;">• 10 รูป → grid 5×2 | 11-12 รูป → grid 4×3 | เกิน 12 รูป → ขึ้นหน้าใหม่</small>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- MODAL: ADD/EDIT CG           -->
+<!-- ============================ -->
+<div class="modal" id="cgModal">
+  <div class="modal-content">
+    <h3 id="cgModalTitle">เพิ่ม CG</h3>
+    <input type="hidden" id="cgEditCode">
+    <div class="field">
+      <label>ชื่อ-สกุล *</label>
+      <input type="text" id="cgName" placeholder="เช่น นางสาววินิจ หัสดง">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>เบอร์โทร</label>
+        <input type="tel" id="cgPhone" placeholder="08x-xxx-xxxx">
+      </div>
+      <div class="field">
+        <label>หมู่ที่</label>
+        <select id="cgMoo">
+          <option value="">--</option>
+          <option value="13">หมู่ 13</option>
+          <option value="15">หมู่ 15</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>บ้านเลขที่</label>
+      <input type="text" id="cgHouseNo">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('cgModal')">ยกเลิก</button>
+      <button class="btn btn-primary" id="cgSaveBtn" onclick="saveCG()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- MODAL: ADD/EDIT ELDERLY      -->
+<!-- ============================ -->
+<div class="modal" id="elderlyModal">
+  <div class="modal-content">
+    <h3 id="elderlyModalTitle">เพิ่มผู้สูงอายุ</h3>
+    <input type="hidden" id="elEditId">
+    <div class="row">
+      <div class="field">
+        <label>ชื่อ-สกุล *</label>
+        <input type="text" id="elName" placeholder="เช่น นางลิม รัตนพันธ์">
+      </div>
+      <div class="field">
+        <label>HN (ไม่บังคับ)</label>
+        <input type="text" id="elHN">
+      </div>
+    </div>
+    <div class="row-3">
+      <div class="field">
+        <label>อายุ (ปี)</label>
+        <input type="number" id="elAge" min="0" max="120">
+      </div>
+      <div class="field">
+        <label>เพศ</label>
+        <select id="elGender">
+          <option value="">--</option>
+          <option value="ชาย">ชาย</option>
+          <option value="หญิง">หญิง</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>กลุ่ม ADL</label>
+        <select id="elADL">
+          <option value="">--</option>
+          <option value="กลุ่ม 1">กลุ่ม 1</option>
+          <option value="กลุ่ม 2">กลุ่ม 2</option>
+          <option value="กลุ่ม 3">กลุ่ม 3</option>
+          <option value="กลุ่ม 4">กลุ่ม 4</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>บ้านเลขที่</label>
+        <input type="text" id="elHouseNo">
+      </div>
+      <div class="field">
+        <label>หมู่ที่ *</label>
+        <select id="elMoo">
+          <option value="">--</option>
+          <option value="13">หมู่ 13</option>
+          <option value="15">หมู่ 15</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>CG ผู้ดูแล *</label>
+        <select id="elCG">
+          <option value="">-- เลือก CG --</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>โหมด PDF *</label>
+        <select id="elPdfMode">
+          <option value="normal">แบบปกติ (4 รูป/หน้า)</option>
+          <option value="obt">แบบ อบต. (10-12 รูป/หน้า)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('elderlyModal')">ยกเลิก</button>
+      <button class="btn btn-primary" id="elSaveBtn" onclick="saveElderly()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- MODAL: DATE PICKER           -->
+<!-- ============================ -->
+<div class="modal" id="dateModal">
+  <div class="modal-content" style="max-width:380px;">
+    <h3>📅 เลือกวันที่เยี่ยม</h3>
+    <div id="dateGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;"></div>
+    <div class="hint" style="text-align:center;margin-bottom:12px;color:#555;">
+      <span id="datePickerCount">เลือกแล้ว 0 วัน</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('dateModal')">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="confirmDatePicker()">✓ ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ -->
+<!-- CONFIRM DIALOG               -->
+<!-- ============================ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="confirmIcon">⚠️</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-sub" id="confirmSub"></div>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" onclick="closeConfirm(false)">ยกเลิก</button>
+      <button class="btn btn-danger" id="confirmYesBtn" onclick="closeConfirm(true)">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF render area (hidden, used for html2canvas) -->
+<div id="pdfRender" style="position:fixed;left:-99999px;top:0;width:794px;background:white;"></div>
+
+<script>
+// ============================================
+// CONFIG (hardcoded)
+// ============================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDqfH5uDnfSmzmhLeeSlJGQGd7y2gjm5uM",
+  authDomain: "datacgpicture.firebaseapp.com",
+  databaseURL: "https://datacgpicture-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "datacgpicture",
+  storageBucket: "datacgpicture.firebasestorage.app",
+  messagingSenderId: "835216376361",
+  appId: "1:835216376361:web:b77aa5b7aa963dc8b7d238"
+};
+const IMGBB_API_KEY = "de40504c4b0201768b948f31525fad66";
+
+const THAI_MONTHS = ['', 'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const THAI_MONTHS_SHORT = ['', 'ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+// ============================================
+// SEED DATA - ข้อมูลตั้งต้น 24 คน
+// ============================================
+const SEED_CGS = [
+  { code: 'CG001', name: 'นางสาววินิจ หัสดง', phone: '', moo: '', houseNo: '', status: 'active' },
+  { code: 'CG002', name: 'นางสาวศุภานัน มุ่งมาตร', phone: '', moo: '', houseNo: '', status: 'active' }
+];
+
+const SEED_ELDERLY = [
+  // CG001 - วินิจ (15 คน) - ทั้งหมดโหมดปกติ
+  { id: 'E001', name: 'นายอั่น ทันงาม', age: 92, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E002', name: 'นางสาวสกุณา สุดแก้ว', age: 24, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E003', name: 'นางสา วิลาช', age: 84, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E004', name: 'นายเกลี้ยง วิลาช', age: 87, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E005', name: 'นางเสาร์ สีดาชาติ', age: 85, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E006', name: 'นายวิเชียร พุ่มผล', age: 41, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E007', name: 'พระประทิน เทียนแดง', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E008', name: 'นายบุญช่วย ไสว', age: 53, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E009', name: 'นางสมศรี ศรีเสริม', age: 72, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E010', name: 'นายใสว บุญขาว', age: 81, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E011', name: 'นายชนม์ นันทร', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E012', name: 'นางลิม น้อยศรี', age: 85, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E013', name: 'นายเลี่ยน หัสดง', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E014', name: 'นางสมจิตร หัสดง', age: 59, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+  { id: 'E015', name: 'นางสาวประพัมศรี บุญเลิศ', age: 52, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+  // CG002 - ศุภานัน (3 ปกติ + 6 อบต.)
+  { id: 'E016', name: 'นางลิม รัตนพันธ์', age: 80, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
+  { id: 'E017', name: 'นางทุม ลมเชย', age: 76, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
+  { id: 'E018', name: 'นางรมย์ แก้วกันหา', age: 76, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
+  { id: 'E019', name: 'นางบุตร สุยไสย์', age: 71, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'obt' },
+  { id: 'E020', name: 'นายกิ ชินทอง', age: 80, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+  { id: 'E021', name: 'นายเวง สระเสรี', age: 86, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+  { id: 'E022', name: 'นายณัฐพงษ์ งำตั้ว', age: 29, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+  { id: 'E023', name: 'นายประดิษฐ์ ศรีปราชญ์', age: 69, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+  { id: 'E024', name: 'นายเสริฐ บ่งบุตร', age: 69, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' }
+];
+
+// ============================================
+// STATE
+// ============================================
+let firebaseDB = null;
+let imgbbKey = IMGBB_API_KEY;
+let allCGs = [];
+let allElderly = [];
+let allVisits = [];
+
+// Record state
+let recSelectedDates = []; // ['2026-03-01', ...]
+let recSelectedPhotos = []; // [{dataUrl, blob}]
+let datePickerSelected = [];
+
+// Confirm state
+let confirmCallback = null;
+
+// ============================================
+// BOOT - เริ่มระบบทันที
+// ============================================
+document.addEventListener('DOMContentLoaded', async function() {
+  // Init Firebase ทันที
+  firebase.initializeApp(FIREBASE_CONFIG);
+  firebaseDB = firebase.database();
+
+  // Seed ข้อมูลครั้งแรก (ถ้ายังไม่มี)
+  await seedDataIfEmpty();
+
+  // เริ่มแอป
+  initApp();
+});
+
+async function seedDataIfEmpty() {
+  try {
+    // เช็คว่ามี CG หรือยัง
+    const snap = await firebaseDB.ref('cgs').once('value');
+    const data = snap.val();
+    if (data && Object.keys(data).length > 0) {
+      return; // มีข้อมูลอยู่แล้ว ไม่ต้อง seed
+    }
+
+    console.log('Seeding initial data...');
+    const now = new Date().toISOString();
+
+    // Seed CGs
+    for (const cg of SEED_CGS) {
+      const { code, ...rest } = cg;
+      await firebaseDB.ref('cgs/' + code).set({ ...rest, createdAt: now });
+    }
+
+    // Seed Elderly
+    for (const e of SEED_ELDERLY) {
+      const { id, ...rest } = e;
+      await firebaseDB.ref('elderly/' + id).set({
+        ...rest,
+        hn: '',
+        houseNo: '',
+        moo: '',
+        adlGroup: '',
+        status: 'active',
+        createdAt: now
+      });
+    }
+
+    console.log('Seeded ' + SEED_CGS.length + ' CGs and ' + SEED_ELDERLY.length + ' elderly');
+  } catch (e) {
+    console.error('Seed failed:', e);
+  }
+}
+
+function initApp() {
+  setupTabs();
+  initMonthYearSelectors();
+  loadAllData();
+}
+
+// ============================================
+// TABS
+// ============================================
+function setupTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      this.classList.add('active');
+      const target = document.getElementById('tab-' + this.dataset.tab);
+      if (target) target.classList.remove('hidden');
+    });
+  });
+}
+
+function initMonthYearSelectors() {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYearAD = now.getFullYear();
+
+  const monthHTML = THAI_MONTHS.slice(1).map((m, i) =>
+    `<option value="${i+1}" ${i+1 === currentMonth ? 'selected' : ''}>${m}</option>`
+  ).join('');
+
+  let yearHTML = '';
+  for (let y = currentYearAD - 2; y <= currentYearAD + 1; y++) {
+    yearHTML += `<option value="${y}" ${y === currentYearAD ? 'selected' : ''}>${y + 543}</option>`;
+  }
+
+  ['dashMonth', 'recMonth', 'rptMonth'].forEach(id => document.getElementById(id).innerHTML = monthHTML);
+  ['dashYear', 'recYear', 'rptYear'].forEach(id => document.getElementById(id).innerHTML = yearHTML);
+
+  ['dashMonth', 'dashYear'].forEach(id => document.getElementById(id).addEventListener('change', loadDashboard));
+}
+
+// ============================================
+// FIREBASE DATA
+// ============================================
+function loadAllData() {
+  // Real-time sync ทั้ง 3 collection
+  firebaseDB.ref('cgs').on('value', snap => {
+    const data = snap.val() || {};
+    allCGs = Object.keys(data).map(k => ({ ...data[k], code: k }));
+    renderCGTable();
+    updateCGSelectors();
+    loadDashboard();
+  });
+
+  firebaseDB.ref('elderly').on('value', snap => {
+    const data = snap.val() || {};
+    allElderly = Object.keys(data).map(k => ({ ...data[k], id: k }));
+    renderElderlyTable();
+    loadDashboard();
+  });
+
+  firebaseDB.ref('visits').on('value', snap => {
+    const data = snap.val() || {};
+    allVisits = Object.keys(data).map(k => ({ ...data[k], id: k }));
+    loadDashboard();
+  });
+}
+
+// ============================================
+// CG MANAGEMENT
+// ============================================
+function openCGModal() {
+  document.getElementById('cgModalTitle').textContent = 'เพิ่ม CG';
+  document.getElementById('cgEditCode').value = '';
+  ['cgName', 'cgPhone', 'cgHouseNo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cgMoo').value = '';
+  document.getElementById('cgModal').classList.add('show');
+}
+
+function editCG(code) {
+  const cg = allCGs.find(c => c.code === code);
+  if (!cg) return;
+  document.getElementById('cgModalTitle').textContent = 'แก้ไข ' + cg.name;
+  document.getElementById('cgEditCode').value = cg.code;
+  document.getElementById('cgName').value = cg.name;
+  document.getElementById('cgPhone').value = cg.phone || '';
+  document.getElementById('cgHouseNo').value = cg.houseNo || '';
+  document.getElementById('cgMoo').value = cg.moo || '';
+  document.getElementById('cgModal').classList.add('show');
+}
+
+async function saveCG() {
+  const data = {
+    name: document.getElementById('cgName').value.trim(),
+    phone: document.getElementById('cgPhone').value.trim(),
+    houseNo: document.getElementById('cgHouseNo').value.trim(),
+    moo: document.getElementById('cgMoo').value,
+    status: 'active'
+  };
+  if (!data.name) { alert('กรุณาใส่ชื่อ'); return; }
+
+  const editCode = document.getElementById('cgEditCode').value;
+  const btn = document.getElementById('cgSaveBtn');
+  btn.disabled = true;
+
+  try {
+    if (editCode) {
+      await firebaseDB.ref('cgs/' + editCode).update(data);
+      showToast('แก้ไข ' + data.name + ' สำเร็จ');
+    } else {
+      const code = await generateCGCode();
+      data.createdAt = new Date().toISOString();
+      await firebaseDB.ref('cgs/' + code).set(data);
+      showToast('เพิ่ม ' + data.name + ' สำเร็จ');
+    }
+    closeModal('cgModal');
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function generateCGCode() {
+  const maxNum = allCGs.reduce((max, cg) => {
+    const num = parseInt(cg.code.replace('CG', '')) || 0;
+    return num > max ? num : max;
+  }, 0);
+  return 'CG' + String(maxNum + 1).padStart(3, '0');
+}
+
+function confirmDeleteCG(code) {
+  const cg = allCGs.find(c => c.code === code);
+  if (!cg) return;
+  const hasElderly = allElderly.some(e => e.cgCode === code);
+  if (hasElderly) {
+    alert('ไม่สามารถลบ ' + cg.name + ' ได้\nเพราะยังมีผู้สูงอายุในการดูแล\nกรุณาย้าย/ลบผู้สูงอายุก่อน');
+    return;
+  }
+  showConfirm('🗑', 'ลบ CG ' + cg.name + '?', 'ข้อมูลจะหายไปและไม่สามารถกู้คืนได้', async function() {
+    try {
+      await firebaseDB.ref('cgs/' + code).remove();
+      showToast('ลบ ' + cg.name + ' สำเร็จ');
+    } catch (e) {
+      alert('เกิดข้อผิดพลาด: ' + e.message);
+    }
+  });
+}
+
+function renderCGTable() {
+  const div = document.getElementById('cgTable');
+  if (!div) return;
+  if (allCGs.length === 0) {
+    div.innerHTML = '<div class="empty"><div class="icon">👥</div>ยังไม่มี CG ในระบบ<br>กดปุ่ม "+ เพิ่ม CG" เพื่อเริ่มต้น</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>รหัส</th><th>ชื่อ-สกุล</th><th>เบอร์โทร</th><th>หมู่</th><th>ผู้สูงอายุ</th><th></th></tr></thead><tbody>';
+  allCGs.forEach(cg => {
+    const elderlyCount = allElderly.filter(e => e.cgCode === cg.code).length;
+    html += `<tr>
+      <td><strong>${cg.code}</strong></td>
+      <td>${cg.name}</td>
+      <td>${cg.phone || '-'}</td>
+      <td>${cg.moo ? 'หมู่ ' + cg.moo : '-'}</td>
+      <td><span class="badge badge-info">${elderlyCount} คน</span></td>
+      <td class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="editCG('${cg.code}')">แก้ไข</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteCG('${cg.code}')">ลบ</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  div.innerHTML = html;
+}
+
+function updateCGSelectors() {
+  const optHtml = '<option value="">-- เลือก CG --</option>' +
+    allCGs.map(cg => `<option value="${cg.code}">${cg.name}</option>`).join('');
+  ['recCG', 'elCG'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = optHtml;
+  });
+  ['filterCG', 'rptCG'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">-- ทั้งหมด --</option>' +
+      allCGs.map(cg => `<option value="${cg.code}">${cg.name}</option>`).join('');
+  });
+}
+
+// ============================================
+// ELDERLY MANAGEMENT
+// ============================================
+function openElderlyModal() {
+  document.getElementById('elderlyModalTitle').textContent = 'เพิ่มผู้สูงอายุ';
+  document.getElementById('elEditId').value = '';
+  ['elName', 'elHN', 'elAge', 'elHouseNo'].forEach(id => document.getElementById(id).value = '');
+  ['elGender', 'elADL', 'elMoo', 'elCG'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('elPdfMode').value = 'normal';
+  document.getElementById('elderlyModal').classList.add('show');
+}
+
+function editElderly(id) {
+  const e = allElderly.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('elderlyModalTitle').textContent = 'แก้ไข ' + e.name;
+  document.getElementById('elEditId').value = e.id;
+  document.getElementById('elName').value = e.name;
+  document.getElementById('elHN').value = e.hn || '';
+  document.getElementById('elAge').value = e.age || '';
+  document.getElementById('elGender').value = e.gender || '';
+  document.getElementById('elADL').value = e.adlGroup || '';
+  document.getElementById('elHouseNo').value = e.houseNo || '';
+  document.getElementById('elMoo').value = e.moo || '';
+  document.getElementById('elCG').value = e.cgCode || '';
+  document.getElementById('elPdfMode').value = e.pdfMode || 'normal';
+  document.getElementById('elderlyModal').classList.add('show');
+}
+
+async function saveElderly() {
+  const data = {
+    name: document.getElementById('elName').value.trim(),
+    hn: document.getElementById('elHN').value.trim(),
+    age: document.getElementById('elAge').value || '',
+    gender: document.getElementById('elGender').value,
+    houseNo: document.getElementById('elHouseNo').value.trim(),
+    moo: document.getElementById('elMoo').value,
+    adlGroup: document.getElementById('elADL').value,
+    cgCode: document.getElementById('elCG').value,
+    pdfMode: document.getElementById('elPdfMode').value || 'normal',
+    status: 'active'
+  };
+  if (!data.name) { alert('กรุณาใส่ชื่อ'); return; }
+  if (!data.cgCode) { alert('กรุณาเลือก CG ผู้ดูแล'); return; }
+  if (!data.moo) { alert('กรุณาเลือกหมู่ที่'); return; }
+
+  const editId = document.getElementById('elEditId').value;
+  const btn = document.getElementById('elSaveBtn');
+  btn.disabled = true;
+
+  try {
+    if (editId) {
+      await firebaseDB.ref('elderly/' + editId).update(data);
+      showToast('แก้ไข ' + data.name + ' สำเร็จ');
+    } else {
+      const id = await generateElderlyId();
+      data.createdAt = new Date().toISOString();
+      await firebaseDB.ref('elderly/' + id).set(data);
+      showToast('เพิ่ม ' + data.name + ' สำเร็จ');
+    }
+    closeModal('elderlyModal');
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function generateElderlyId() {
+  const maxNum = allElderly.reduce((max, e) => {
+    const num = parseInt(e.id.replace('E', '')) || 0;
+    return num > max ? num : max;
+  }, 0);
+  return 'E' + String(maxNum + 1).padStart(3, '0');
+}
+
+function confirmDeleteElderly(id) {
+  const e = allElderly.find(x => x.id === id);
+  if (!e) return;
+  showConfirm('🗑', 'ลบ ' + e.name + '?', 'ข้อมูลและการเยี่ยมที่บันทึกไว้จะหายไปทั้งหมด', async function() {
+    try {
+      // ลบ visits ของคนนี้ด้วย
+      const visitsToDelete = allVisits.filter(v => v.elderlyId === id);
+      for (const v of visitsToDelete) {
+        await firebaseDB.ref('visits/' + v.id).remove();
+      }
+      await firebaseDB.ref('elderly/' + id).remove();
+      showToast('ลบ ' + e.name + ' สำเร็จ');
+    } catch (e) {
+      alert('เกิดข้อผิดพลาด: ' + e.message);
+    }
+  });
+}
+
+function renderElderlyTable() {
+  const div = document.getElementById('elderlyTable');
+  if (!div) return;
+  const filterCG = document.getElementById('filterCG').value;
+  const filterMode = document.getElementById('filterMode').value;
+  let list = allElderly;
+  if (filterCG) list = list.filter(e => e.cgCode === filterCG);
+  if (filterMode) list = list.filter(e => (e.pdfMode || 'normal') === filterMode);
+
+  if (list.length === 0) {
+    div.innerHTML = '<div class="empty"><div class="icon">👴</div>ยังไม่มีผู้สูงอายุ<br>กดปุ่ม "+ เพิ่มผู้สูงอายุ" เพื่อเริ่มต้น</div>';
+    return;
+  }
+
+  let html = '<table><thead><tr><th>ชื่อ-สกุล</th><th>อายุ</th><th>หมู่</th><th>ADL</th><th>CG</th><th>โหมด PDF</th><th></th></tr></thead><tbody>';
+  list.forEach(e => {
+    const cg = allCGs.find(c => c.code === e.cgCode);
+    const modeBadge = (e.pdfMode === 'obt')
+      ? '<span class="badge badge-purple">อบต. (10-12 รูป)</span>'
+      : '<span class="badge badge-info">ปกติ (4 รูป)</span>';
+    html += `<tr>
+      <td><strong>${e.name}</strong>${e.hn ? '<br><small style="color:#888;">HN: ' + e.hn + '</small>' : ''}</td>
+      <td>${e.age || '-'}</td>
+      <td>${e.moo ? 'หมู่ ' + e.moo : '-'}</td>
+      <td>${e.adlGroup || '-'}</td>
+      <td>${cg ? cg.name : '<span style="color:#D85A30;">ไม่พบ CG</span>'}</td>
+      <td>${modeBadge}</td>
+      <td class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="editElderly('${e.id}')">แก้ไข</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteElderly('${e.id}')">ลบ</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  div.innerHTML = html;
+}
+
+// ============================================
+// RECORD VISIT
+// ============================================
+function onRecCGChange() {
+  const cgCode = document.getElementById('recCG').value;
+  const sel = document.getElementById('recElderly');
+  if (!cgCode) {
+    sel.innerHTML = '<option value="">-- เลือก CG ก่อน --</option>';
+    document.getElementById('recElderlyInfo').classList.add('hidden');
+    return;
+  }
+  const list = allElderly.filter(e => e.cgCode === cgCode && e.status === 'active');
+  sel.innerHTML = '<option value="">-- เลือกผู้สูงอายุ --</option>' +
+    list.map(e => `<option value="${e.id}">${e.name}${e.age ? ' (อายุ ' + e.age + ' ปี)' : ''}</option>`).join('');
+  document.getElementById('recElderlyInfo').classList.add('hidden');
+}
+
+function onRecElderlyChange() {
+  const id = document.getElementById('recElderly').value;
+  const info = document.getElementById('recElderlyInfo');
+  const photoHint = document.getElementById('photoHint');
+  const datesHint = document.getElementById('datesHint');
+  const dayCountInput = document.getElementById('recDayCount');
+
+  if (!id) {
+    info.classList.add('hidden');
+    return;
+  }
+  const e = allElderly.find(x => x.id === id);
+  if (!e) return;
+
+  const mode = e.pdfMode || 'normal';
+  if (mode === 'obt') {
+    info.innerHTML = `<strong>${e.name}</strong> | อายุ ${e.age || '-'} ปี | <span class="badge badge-purple">โหมด อบต. (10-12 รูป/หน้า)</span><br>เยี่ยมเดือนละ 10-12 ครั้ง`;
+    photoHint.textContent = 'ใส่ 10-12 รูป (เท่ากับจำนวนวัน) — ระบบจะสุ่มจับคู่กับวันที่';
+    datesHint.textContent = 'เลือก 10-12 วันในเดือนนั้น (ถ้าเกิน 12 จะขึ้นหน้าใหม่)';
+    if (!dayCountInput.value) dayCountInput.value = 10;
+  } else {
+    info.innerHTML = `<strong>${e.name}</strong> | อายุ ${e.age || '-'} ปี | <span class="badge badge-info">โหมดปกติ (4 รูป/หน้า)</span>`;
+    photoHint.textContent = 'ใส่ 4 รูป (หรือเท่ากับจำนวนวัน)';
+    datesHint.textContent = 'เลือกวันที่ในเดือนตามจำนวนที่ใส่ไว้';
+    if (!dayCountInput.value) dayCountInput.value = 4;
+  }
+  info.classList.remove('hidden');
+}
+
+// Date picker
+function openDatePicker() {
+  const month = parseInt(document.getElementById('recMonth').value);
+  const year = parseInt(document.getElementById('recYear').value);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
+
+  datePickerSelected = [...recSelectedDates];
+
+  const grid = document.getElementById('dateGrid');
+  let html = '';
+  ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].forEach(d => {
+    html += `<div style="text-align:center;padding:6px;font-weight:600;color:#888;font-size:12px;">${d}</div>`;
+  });
+  for (let i = 0; i < firstDayOfWeek; i++) html += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const selected = datePickerSelected.includes(dateStr);
+    html += `<div class="date-cell ${selected ? 'sel' : ''}" data-date="${dateStr}" onclick="toggleDate('${dateStr}', this)" style="text-align:center;padding:10px 4px;cursor:pointer;border-radius:6px;font-size:14px;${selected ? 'background:#1D9E75;color:white;font-weight:600;' : 'background:#F5F7FA;'}">${d}</div>`;
+  }
+  grid.innerHTML = html;
+  updateDatePickerCount();
+  document.getElementById('dateModal').classList.add('show');
+}
+
+function toggleDate(dateStr, el) {
+  const idx = datePickerSelected.indexOf(dateStr);
+  if (idx >= 0) {
+    datePickerSelected.splice(idx, 1);
+    el.style.background = '#F5F7FA';
+    el.style.color = '';
+    el.style.fontWeight = '';
+  } else {
+    datePickerSelected.push(dateStr);
+    el.style.background = '#1D9E75';
+    el.style.color = 'white';
+    el.style.fontWeight = '600';
+  }
+  updateDatePickerCount();
+}
+
+function updateDatePickerCount() {
+  document.getElementById('datePickerCount').textContent = `เลือกแล้ว ${datePickerSelected.length} วัน`;
+}
+
+function confirmDatePicker() {
+  recSelectedDates = [...datePickerSelected].sort();
+  renderSelectedDates();
+  closeModal('dateModal');
+}
+
+function renderSelectedDates() {
+  const div = document.getElementById('selectedDates');
+  if (recSelectedDates.length === 0) {
+    div.innerHTML = '<div style="color:#999;font-size:13px;font-style:italic;">ยังไม่ได้เลือกวันที่</div>';
+    return;
+  }
+  div.innerHTML = recSelectedDates.map(d => {
+    const date = new Date(d);
+    const day = date.getDate();
+    const month = THAI_MONTHS_SHORT[date.getMonth() + 1];
+    return `<div class="date-chip">${day} ${month} <span class="x" onclick="removeDate('${d}')">×</span></div>`;
+  }).join('');
+}
+
+function removeDate(dateStr) {
+  recSelectedDates = recSelectedDates.filter(d => d !== dateStr);
+  renderSelectedDates();
+}
+
+// Photo input
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'recPhotoInput') {
+    handlePhotoInput(e.target);
+  }
+});
+
+function handlePhotoInput(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        // Resize ก่อนเก็บ (สำหรับแสดงผลและอัปโหลด)
+        const canvas = document.createElement('canvas');
+        const maxSize = 1200;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+        else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        recSelectedPhotos.push({ dataUrl: dataUrl, base64: dataUrl.split(',')[1] });
+        renderRecPhotos();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderRecPhotos() {
+  const div = document.getElementById('recPhotoList');
+  div.innerHTML = recSelectedPhotos.map((p, idx) =>
+    `<div class="photo-item">
+      <img src="${p.dataUrl}">
+      <div class="remove" onclick="removePhoto(${idx})">×</div>
+    </div>`
+  ).join('');
+}
+
+function removePhoto(idx) {
+  recSelectedPhotos.splice(idx, 1);
+  renderRecPhotos();
+}
+
+// Submit record
+async function submitRecord() {
+  const cgCode = document.getElementById('recCG').value;
+  const elderlyId = document.getElementById('recElderly').value;
+  const month = parseInt(document.getElementById('recMonth').value);
+  const year = parseInt(document.getElementById('recYear').value);
+  const note = document.getElementById('recNote').value;
+
+  if (!cgCode) { alert('กรุณาเลือก CG'); return; }
+  if (!elderlyId) { alert('กรุณาเลือกผู้สูงอายุ'); return; }
+  if (recSelectedDates.length === 0) { alert('กรุณาเลือกวันที่อย่างน้อย 1 วัน'); return; }
+  if (recSelectedPhotos.length === 0) { alert('กรุณาเลือกรูปอย่างน้อย 1 รูป'); return; }
+
+  const cg = allCGs.find(c => c.code === cgCode);
+  const elderly = allElderly.find(e => e.id === elderlyId);
+  if (!cg || !elderly) { alert('ไม่พบข้อมูล CG หรือผู้สูงอายุ'); return; }
+
+  // สุ่มจับคู่รูปกับวันที่
+  const dates = [...recSelectedDates].sort();
+  const shuffled = shuffleArray([...recSelectedPhotos]);
+  const pairs = [];
+  for (let i = 0; i < dates.length; i++) {
+    const photo = shuffled[i % shuffled.length]; // ถ้ารูปน้อยกว่าวัน จะวนซ้ำ
+    pairs.push({ date: dates[i], photo: photo });
+  }
+
+  const btn = document.getElementById('recSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ กำลังอัปโหลด... 0/' + pairs.length;
+
+  try {
+    let uploaded = 0;
+    for (const pair of pairs) {
+      const url = await uploadToImgBB(pair.photo.base64);
+      const visitId = 'V' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      const visitData = {
+        visitDate: pair.date,
+        recordedAt: new Date().toISOString(),
+        elderlyId: elderlyId,
+        elderlyName: elderly.name,
+        cgCode: cgCode,
+        cgName: cg.name,
+        photoUrl: url,
+        note: note,
+        pdfMode: elderly.pdfMode || 'normal'
+      };
+      await firebaseDB.ref('visits/' + visitId).set(visitData);
+      uploaded++;
+      btn.innerHTML = '⏳ กำลังอัปโหลด... ' + uploaded + '/' + pairs.length;
+    }
+
+    showToast('✓ บันทึกสำเร็จ ' + pairs.length + ' รายการ');
+    // Reset form
+    recSelectedDates = [];
+    recSelectedPhotos = [];
+    renderSelectedDates();
+    renderRecPhotos();
+    document.getElementById('recElderly').value = '';
+    document.getElementById('recDayCount').value = '';
+    document.getElementById('recNote').value = '';
+    document.getElementById('recElderlyInfo').classList.add('hidden');
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💾 บันทึกข้อมูล';
+  }
+}
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ============================================
+// ImgBB UPLOAD
+// ============================================
+async function uploadToImgBB(base64) {
+  const formData = new FormData();
+  formData.append('image', base64);
+  const res = await fetch('https://api.imgbb.com/1/upload?key=' + imgbbKey, {
+    method: 'POST',
+    body: formData
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error('ImgBB upload failed: ' + JSON.stringify(json));
+  return json.data.url;
+}
+
+// ============================================
+// DASHBOARD
+// ============================================
+function loadDashboard() {
+  if (!document.getElementById('dashStats')) return;
+  const month = parseInt(document.getElementById('dashMonth').value);
+  const year = parseInt(document.getElementById('dashYear').value);
+
+  // Filter visits for this month
+  const monthVisits = allVisits.filter(v => {
+    if (!v.visitDate) return false;
+    const d = new Date(v.visitDate);
+    return d.getFullYear() === year && (d.getMonth() + 1) === month;
+  });
+
+  const visitedSet = new Set(monthVisits.map(v => v.elderlyId));
+  const activeElderly = allElderly.filter(e => e.status !== 'inactive');
+
+  // Stats
+  document.getElementById('dashStats').innerHTML = `
+    <div class="grid-stats">
+      <div class="stat info"><div class="label">CG ทั้งหมด</div><div class="value">${allCGs.length}</div></div>
+      <div class="stat info"><div class="label">ผู้สูงอายุ</div><div class="value">${activeElderly.length}</div></div>
+      <div class="stat success"><div class="label">เยี่ยมแล้ว</div><div class="value">${visitedSet.size}</div><div class="sub">${activeElderly.length > 0 ? Math.round(visitedSet.size / activeElderly.length * 100) : 0}% ของทั้งหมด</div></div>
+      <div class="stat warning"><div class="label">ยังไม่ได้เยี่ยม</div><div class="value">${activeElderly.length - visitedSet.size}</div></div>
+      <div class="stat danger"><div class="label">รวมจำนวนครั้ง</div><div class="value">${monthVisits.length}</div><div class="sub">ครั้ง/รูป</div></div>
+    </div>`;
+
+  // Total stats (overall)
+  const totalNormal = activeElderly.filter(e => (e.pdfMode || 'normal') === 'normal').length;
+  const totalObt = activeElderly.filter(e => e.pdfMode === 'obt').length;
+  document.getElementById('dashTotal').innerHTML = `
+    <div class="grid-stats">
+      <div class="stat info"><div class="label">บันทึกทั้งหมด</div><div class="value">${allVisits.length}</div><div class="sub">ครั้ง</div></div>
+      <div class="stat info"><div class="label">โหมดปกติ</div><div class="value">${totalNormal}</div><div class="sub">คน (4 รูป/หน้า)</div></div>
+      <div class="stat info"><div class="label">โหมด อบต.</div><div class="value">${totalObt}</div><div class="sub">คน (10-12 รูป/หน้า)</div></div>
+    </div>`;
+
+  // CG breakdown
+  const div = document.getElementById('dashCgList');
+  if (allCGs.length === 0) {
+    div.innerHTML = '<div class="empty">ยังไม่มี CG</div>';
+    return;
+  }
+  let html = '<div class="table-responsive"><table><thead><tr><th>CG</th><th>ผู้สูงอายุ</th><th>เยี่ยมแล้ว</th><th>ครั้งที่เยี่ยม</th><th>ความก้าวหน้า</th></tr></thead><tbody>';
+  allCGs.forEach(cg => {
+    const cgElderly = activeElderly.filter(e => e.cgCode === cg.code);
+    const cgVisits = monthVisits.filter(v => v.cgCode === cg.code);
+    const cgVisited = new Set(cgVisits.map(v => v.elderlyId)).size;
+    const pct = cgElderly.length > 0 ? Math.round(cgVisited / cgElderly.length * 100) : 0;
+    html += `<tr>
+      <td><strong>${cg.name}</strong><br><small style="color:#888;">${cg.code}</small></td>
+      <td>${cgElderly.length}</td>
+      <td>${cgVisited}/${cgElderly.length}</td>
+      <td>${cgVisits.length} ครั้ง</td>
+      <td><div style="display:flex;align-items:center;gap:8px;"><span style="min-width:38px;font-weight:600;">${pct}%</span><div class="progress" style="flex:1;"><div class="progress-bar" style="width:${pct}%"></div></div></div></td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  div.innerHTML = html;
+}
+
+// ============================================
+// PDF GENERATION
+// ============================================
+async function generatePDF() {
+  const month = parseInt(document.getElementById('rptMonth').value);
+  const year = parseInt(document.getElementById('rptYear').value);
+  const cgFilter = document.getElementById('rptCG').value;
+
+  // กรอง visits
+  let visits = allVisits.filter(v => {
+    if (!v.visitDate) return false;
+    const d = new Date(v.visitDate);
+    return d.getFullYear() === year && (d.getMonth() + 1) === month;
+  });
+  if (cgFilter) visits = visits.filter(v => v.cgCode === cgFilter);
+
+  if (visits.length === 0) {
+    document.getElementById('reportAlert').innerHTML = '<div class="alert alert-warning">ไม่มีข้อมูลการเยี่ยมในเดือนที่เลือก</div>';
+    return;
+  }
+
+  // Group by elderly
+  const grouped = {};
+  visits.forEach(v => {
+    if (!grouped[v.elderlyId]) {
+      const el = allElderly.find(e => e.id === v.elderlyId);
+      grouped[v.elderlyId] = {
+        elderlyId: v.elderlyId,
+        elderlyName: v.elderlyName,
+        elderlyAge: el ? el.age : '',
+        cgName: v.cgName,
+        pdfMode: v.pdfMode || (el ? el.pdfMode : 'normal') || 'normal',
+        photos: []
+      };
+    }
+    grouped[v.elderlyId].photos.push({ url: v.photoUrl, date: v.visitDate });
+  });
+
+  // Sort photos by date
+  Object.values(grouped).forEach(g => g.photos.sort((a, b) => new Date(a.date) - new Date(b.date)));
+
+  const btn = document.getElementById('rptBtn');
+  btn.disabled = true;
+  document.getElementById('reportAlert').innerHTML = '<div class="alert alert-warning">⏳ กำลังสร้าง PDF กรุณารอ...</div>';
+  document.getElementById('rptResult').innerHTML = '';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageWidth = 210, pageHeight = 297;
+
+    const monthName = THAI_MONTHS[month];
+    const buddhistYear = year + 543;
+
+    let pageIdx = 0;
+    const groupArr = Object.values(grouped);
+
+    for (let gi = 0; gi < groupArr.length; gi++) {
+      const item = groupArr[gi];
+      btn.innerHTML = `⏳ กำลังสร้างหน้า ${gi + 1}/${groupArr.length}`;
+
+      if (item.pdfMode === 'obt') {
+        // โหมด อบต. - 10-12 รูป/หน้า (ขึ้นหน้าใหม่ถ้าเกิน 12)
+        const chunks = chunkArray(item.photos, 12); // ทุกๆ 12 รูป = 1 หน้า
+        for (const chunk of chunks) {
+          if (pageIdx > 0) pdf.addPage();
+          await renderObtPage(pdf, item, chunk, monthName, buddhistYear);
+          pageIdx++;
+        }
+      } else {
+        // โหมดปกติ - 4 รูป/หน้า
+        const chunks = chunkArray(item.photos, 4);
+        for (const chunk of chunks) {
+          if (pageIdx > 0) pdf.addPage();
+          await renderNormalPage(pdf, item, chunk, monthName, buddhistYear);
+          pageIdx++;
+        }
+      }
+    }
+
+    const filename = `สรุปการเยี่ยม_${monthName}${buddhistYear}${cgFilter ? '_' + (allCGs.find(c => c.code === cgFilter) || {}).name : ''}.pdf`;
+    pdf.save(filename);
+
+    document.getElementById('reportAlert').innerHTML = '';
+    document.getElementById('rptResult').innerHTML = `<div class="alert alert-success">✓ สร้าง PDF สำเร็จ — ${groupArr.length} คน, ${pageIdx} หน้า<br>ไฟล์: <strong>${filename}</strong></div>`;
+    showToast('✓ ดาวน์โหลด PDF สำเร็จ');
+  } catch (e) {
+    document.getElementById('reportAlert').innerHTML = '<div class="alert alert-error">เกิดข้อผิดพลาด: ' + e.message + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📄 สร้าง PDF';
+  }
+}
+
+async function renderNormalPage(pdf, item, photos, monthName, buddhistYear) {
+  // Build HTML
+  const html = `
+    <div style="width:794px;padding:60px 60px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;">
+      <div style="text-align:center;margin-bottom:30px;">
+        <div style="font-size:22px;font-weight:600;margin-bottom:6px;">ภาพกิจกรรมเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+        <div style="font-size:20px;margin-bottom:6px;">ประจำเดือน ${monthName} ${buddhistYear}</div>
+        <div style="font-size:20px;">${item.elderlyName}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px 40px;">
+        ${photos.map(p => `
+          <div style="text-align:center;">
+            <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
+              <img src="${p.url}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
+            </div>
+            <div style="font-size:18px;margin-top:10px;">${formatThaiDateShort(p.date)}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="position:absolute;bottom:30px;left:60px;right:60px;font-size:12px;color:#888;text-align:center;">
+        CG: ${item.cgName} | รพ.สต.ทับทิมสยาม 07
+      </div>
+    </div>
+  `;
+  await renderHtmlToPdfPage(pdf, html);
+}
+
+async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
+  // วันที่เป็น "1,4,6,8,..."
+  const dateStr = photos.map(p => new Date(p.date).getDate()).join(',');
+
+  // ปรับ grid อัตโนมัติตามจำนวนรูป
+  // 1-5 รูป → 5 คอลัมน์ 1 แถว
+  // 6-10 รูป → 5 คอลัมน์ 2 แถว
+  // 11-12 รูป → 4 คอลัมน์ 3 แถว
+  let cols, fontSize;
+  const n = photos.length;
+  if (n <= 5) {
+    cols = 5;
+    fontSize = 13;
+  } else if (n <= 10) {
+    cols = 5;
+    fontSize = 13;
+  } else {
+    // 11-12 รูป
+    cols = 4;
+    fontSize = 13;
+  }
+
+  const html = `
+    <div style="width:794px;padding:50px 50px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;">
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="font-size:22px;font-weight:600;margin-bottom:6px;">ภาพดูแลผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+        <div style="font-size:18px;margin-bottom:6px;">ประจำเดือน ${monthName} ${buddhistYear}</div>
+        <div style="font-size:17px;">ชื่อ ${item.elderlyName} อายุ ${item.elderlyAge || '-'} ปี วันที่ ${dateStr} ${monthName} ${buddhistYear}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:10px;">
+        ${photos.map((p, i) => `
+          <div style="text-align:center;">
+            <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
+              <img src="${p.url}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
+            </div>
+            <div style="font-size:${fontSize}px;margin-top:4px;">${new Date(p.date).getDate()} ${THAI_MONTHS_SHORT[new Date(p.date).getMonth()+1]}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="margin-top:14px;font-size:12px;color:#888;text-align:center;">
+        CG: ${item.cgName} | รพ.สต.ทับทิมสยาม 07
+      </div>
+    </div>
+  `;
+  await renderHtmlToPdfPage(pdf, html);
+}
+
+async function renderHtmlToPdfPage(pdf, html) {
+  const container = document.getElementById('pdfRender');
+  container.innerHTML = html;
+
+  // รอรูปโหลดเสร็จ
+  const imgs = container.querySelectorAll('img');
+  await Promise.all(Array.from(imgs).map(img => {
+    if (img.complete) return Promise.resolve();
+    return new Promise(resolve => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+  }));
+
+  // รอเพิ่มเล็กน้อยให้ render เสร็จ
+  await new Promise(r => setTimeout(r, 300));
+
+  const canvas = await html2canvas(container.firstElementChild, {
+    scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false
+  });
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+  pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+}
+
+function chunkArray(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function formatThaiDateShort(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDate();
+  const month = THAI_MONTHS_SHORT[d.getMonth() + 1];
+  const year = (d.getFullYear() + 543).toString().slice(-2);
+  return `${day} ${month} ${year}`;
+}
+
+// ============================================
+// HELPERS
+// ============================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function showConfirm(icon, message, sub, callback) {
+  document.getElementById('confirmIcon').textContent = icon;
+  document.getElementById('confirmMsg').textContent = message;
+  document.getElementById('confirmSub').textContent = sub || '';
+  confirmCallback = callback;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+
+function closeConfirm(yes) {
+  document.getElementById('confirmOverlay').classList.remove('show');
+  if (yes && confirmCallback) confirmCallback();
+  confirmCallback = null;
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) modal.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>

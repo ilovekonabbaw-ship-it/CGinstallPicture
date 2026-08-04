@@ -3,14 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ระบบบันทึกการเยี่ยมผู้สูงอายุ - รพ.สต.ทับทิมสยาม 07</title>
+<title>ระบบบันทึกการเยี่ยมผู้สูงอายุ</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<!-- jsPDF + html2canvas สำหรับสร้าง PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -18,12 +15,28 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; font-size: 15px; line-height: 1.5; }
 
-/* Header */
-.header { background: linear-gradient(135deg, #1D9E75 0%, #0F6E56 100%); color: white; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.header h1 { font-size: 18px; font-weight: 600; margin-bottom: 2px; }
-.header p { font-size: 12px; opacity: 0.9; }
+/* Hospital selector screen */
+.hospital-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: linear-gradient(135deg, #1D9E75 0%, #185FA5 100%); }
+.hospital-box { background: white; border-radius: 20px; padding: 32px 24px; max-width: 520px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
+.hospital-box h1 { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 6px; color: #2C2C2A; }
+.hospital-box p.subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 24px; }
+.hospital-card { border: 2px solid #E0E4EA; border-radius: 12px; padding: 18px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
+.hospital-card:hover { border-color: #1D9E75; background: #F0F9F5; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(29,158,117,0.15); }
+.hospital-card .hicon { font-size: 32px; }
+.hospital-card .hinfo { flex: 1; }
+.hospital-card .hinfo .hname { font-weight: 600; font-size: 16px; color: #2C2C2A; margin-bottom: 3px; }
+.hospital-card .hinfo .hsub { font-size: 13px; color: #666; }
+.hospital-card .harrow { font-size: 22px; color: #888; }
 
-/* Layout */
+/* Main header */
+.header { background: linear-gradient(135deg, #1D9E75 0%, #0F6E56 100%); color: white; padding: 14px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
+.header.blue { background: linear-gradient(135deg, #185FA5 0%, #0C447C 100%); }
+.header .hinfo { flex: 1; }
+.header h1 { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
+.header p { font-size: 12px; opacity: 0.9; }
+.header .switch-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: inherit; }
+.header .switch-btn:hover { background: rgba(255,255,255,0.3); }
+
 .container { max-width: 1200px; margin: 0 auto; padding: 14px; }
 
 /* Tabs */
@@ -32,12 +45,10 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .tab.active { background: #1D9E75; color: white; }
 .tab:hover:not(.active) { background: #F0F0F0; }
 
-/* Cards */
 .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .card h2 { font-size: 17px; font-weight: 600; margin-bottom: 12px; color: #2C2C2A; }
 .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #555; }
 
-/* Stats */
 .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .stat { background: linear-gradient(135deg, #F8F9FB 0%, #EEF1F5 100%); padding: 14px; border-radius: 10px; }
 .stat .label { font-size: 12px; color: #666; margin-bottom: 4px; }
@@ -48,7 +59,6 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .stat.info .value { color: #185FA5; }
 .stat.danger .value { color: #D85A30; }
 
-/* Form */
 .field { margin-bottom: 12px; }
 .field label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 500; }
 .field input, .field select, .field textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E4EA; border-radius: 8px; font-size: 15px; font-family: inherit; background: white; color: #2C2C2A; }
@@ -59,7 +69,6 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 @media (max-width: 600px) { .row, .row-3 { grid-template-columns: 1fr; } }
 
-/* Buttons */
 .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .btn-primary { background: #1D9E75; color: white; }
 .btn-primary:hover { background: #0F6E56; }
@@ -73,14 +82,12 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .btn-lg { padding: 14px 20px; font-size: 16px; width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Tables */
 table { width: 100%; border-collapse: collapse; }
 table th, table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #F0F0F0; font-size: 14px; }
 table th { background: #F8F9FB; font-weight: 600; color: #555; font-size: 13px; }
 table tr:hover td { background: #FAFBFD; }
 .table-responsive { overflow-x: auto; }
 
-/* Badges */
 .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 500; }
 .badge-success { background: #EAF3DE; color: #173404; }
 .badge-warning { background: #FAEEDA; color: #412402; }
@@ -88,48 +95,40 @@ table tr:hover td { background: #FAFBFD; }
 .badge-purple { background: #E8E3F8; color: #4527A0; }
 .badge-gray { background: #ECECEC; color: #555; }
 
-/* Progress */
 .progress { background: #F0F0F0; border-radius: 4px; height: 6px; overflow: hidden; margin-top: 4px; }
 .progress-bar { height: 100%; background: linear-gradient(90deg, #1D9E75, #34C896); transition: width 0.4s; }
 
-/* Alerts */
 .alert { padding: 12px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
 .alert-success { background: #EAF3DE; color: #173404; border: 1px solid #D4E5C0; }
 .alert-error { background: #FCEBEB; color: #501313; border: 1px solid #F4C2C2; }
 .alert-warning { background: #FAEEDA; color: #412402; border: 1px solid #F0DCB4; }
 .alert-info { background: #E6F1FB; color: #042C53; border: 1px solid #BFD9F0; }
 
-/* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
 .modal.show { display: flex; }
 .modal-content { background: white; border-radius: 12px; padding: 20px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; }
 .modal-content h3 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 
-/* Confirm dialog */
 .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
 .confirm-overlay.show { display: flex; }
 .confirm-box { background: white; border-radius: 12px; padding: 24px; max-width: 380px; width: 100%; text-align: center; }
 .confirm-icon { font-size: 40px; margin-bottom: 12px; }
 .confirm-msg { font-size: 16px; margin-bottom: 8px; font-weight: 500; }
-.confirm-sub { font-size: 13px; color: #888; margin-bottom: 20px; }
+.confirm-sub { font-size: 13px; color: #888; margin-bottom: 20px; white-space: pre-line; }
 .confirm-actions { display: flex; gap: 8px; }
 .confirm-actions .btn { flex: 1; }
 
-/* Loading */
 .loading { text-align: center; padding: 40px 20px; }
 .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #E0E4EA; border-top-color: #1D9E75; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Empty */
 .empty { text-align: center; padding: 40px 20px; color: #888; font-size: 14px; }
 .empty .icon { font-size: 40px; margin-bottom: 8px; opacity: 0.4; }
 
-/* Toast */
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2C2C2A; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 3000; animation: slideUp 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 @keyframes slideUp { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
-/* Photo preview */
 .photo-area { border: 2px dashed #C7CFD9; border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #FAFBFD; }
 .photo-area:hover { border-color: #1D9E75; background: #F0F9F5; }
 .photo-area input[type="file"] { display: none; }
@@ -141,29 +140,19 @@ table tr:hover td { background: #FAFBFD; }
 .photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #f0f0f0; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
 .photo-item img { width: 100%; height: 100%; object-fit: cover; }
 .photo-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(220,53,69,0.95); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; line-height: 1; }
-.photo-item .date-tag { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; font-size: 11px; padding: 3px; text-align: center; }
 
-/* Date chips */
 .date-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .date-chip { padding: 6px 10px; background: #F0F9F5; color: #0F6E56; border-radius: 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #C5E5D2; }
 .date-chip .x { cursor: pointer; opacity: 0.6; font-weight: bold; }
 .date-chip .x:hover { opacity: 1; color: #D85A30; }
 
-/* Setup screen */
-.setup-screen { max-width: 500px; margin: 40px auto; padding: 24px; }
-.setup-screen .card { padding: 24px; }
-.setup-screen h2 { font-size: 20px; margin-bottom: 16px; text-align: center; }
-
-/* Hide for screen */
 .hidden { display: none !important; }
 
-/* Filter */
 .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
 .filter-bar select, .filter-bar input { padding: 8px 10px; font-size: 14px; border: 1px solid #E0E4EA; border-radius: 6px; }
 
 .actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
-/* Browser cards */
 .browser-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #E0E4EA; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; background: white; }
 .browser-row:hover { border-color: #1D9E75; background: #F0F9F5; }
 .browser-row .icon { font-size: 22px; }
@@ -194,13 +183,48 @@ table tr:hover td { background: #FAFBFD; }
 <body>
 
 <!-- ============================ -->
+<!-- HOSPITAL SELECTOR SCREEN     -->
+<!-- ============================ -->
+<div id="hospitalScreen" class="hospital-screen">
+  <div class="hospital-box">
+    <h1>🏥 เลือกโรงพยาบาลส่งเสริมสุขภาพตำบล</h1>
+    <p class="subtitle">ระบบบันทึกการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</p>
+
+    <div class="hospital-card" onclick="selectHospital('thapthimsiam')">
+      <div class="hicon">🏥</div>
+      <div class="hinfo">
+        <div class="hname">รพ.สต.ทับทิมสยาม 07</div>
+        <div class="hsub">ต.บักดอง อ.ขุนหาญ จ.ศรีสะเกษ</div>
+      </div>
+      <div class="harrow">›</div>
+    </div>
+
+    <div class="hospital-card" onclick="selectHospital('samrongkiat')">
+      <div class="hicon">🏥</div>
+      <div class="hinfo">
+        <div class="hname">รพ.สต.สำโรงเกียรติ</div>
+        <div class="hsub">ต.บักดอง อ.ขุนหาญ จ.ศรีสะเกษ</div>
+      </div>
+      <div class="harrow">›</div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;font-size:12px;color:#999;">
+      💾 ข้อมูลแต่ละ รพ.สต. แยกจากกันโดยสิ้นเชิง
+    </div>
+  </div>
+</div>
+
+<!-- ============================ -->
 <!-- MAIN APP                     -->
 <!-- ============================ -->
-<div id="mainApp">
+<div id="mainApp" class="hidden">
 
-  <div class="header">
-    <h1>📋 ระบบบันทึกการเยี่ยมผู้สูงอายุ</h1>
-    <p>รพ.สต.ทับทิมสยาม 07 ต.บักดอง อ.ขุนหาญ จ.ศรีสะเกษ</p>
+  <div class="header" id="mainHeader">
+    <div class="hinfo">
+      <h1 id="headerTitle">📋 ระบบบันทึกการเยี่ยมผู้สูงอายุ</h1>
+      <p id="headerSubtitle">-</p>
+    </div>
+    <button class="switch-btn" onclick="backToHospitalSelector()">🔄 เปลี่ยน รพ.สต.</button>
   </div>
 
   <div class="container">
@@ -212,7 +236,7 @@ table tr:hover td { background: #FAFBFD; }
       <div class="tab" data-tab="report">📄 สร้าง PDF</div>
     </div>
 
-    <!-- =============== TAB: DASHBOARD =============== -->
+    <!-- DASHBOARD -->
     <div id="tab-dashboard" class="tab-content">
       <div class="filter-bar">
         <span style="font-weight:500;">เดือน:</span>
@@ -245,7 +269,7 @@ table tr:hover td { background: #FAFBFD; }
       </div>
     </div>
 
-    <!-- =============== TAB: RECORD =============== -->
+    <!-- RECORD -->
     <div id="tab-record" class="tab-content hidden">
       <div class="card">
         <h2>📷 บันทึกการเยี่ยมผู้สูงอายุ</h2>
@@ -279,7 +303,7 @@ table tr:hover td { background: #FAFBFD; }
           <div class="field">
             <label>4. จำนวนวันที่เยี่ยม *</label>
             <input type="number" id="recDayCount" min="1" max="31" placeholder="เช่น 4 หรือ 11">
-            <div class="hint">แบบปกติ ~4 วัน, แบบ อบต. ~10-12 วัน</div>
+            <div class="hint">อัปกี่รูปก็ได้ ระบบจัดหน้าให้พอดี A4 อัตโนมัติ</div>
           </div>
         </div>
 
@@ -287,7 +311,6 @@ table tr:hover td { background: #FAFBFD; }
           <label>5. เลือกวันที่เยี่ยม</label>
           <button class="btn btn-secondary btn-sm" onclick="openDatePicker()">📅 เลือกวันที่</button>
           <div id="selectedDates" class="date-chips"></div>
-          <div class="hint" id="datesHint">เลือกวันที่ในเดือนที่ระบุ ตามจำนวนที่ใส่ไว้</div>
         </div>
 
         <div class="field">
@@ -295,7 +318,7 @@ table tr:hover td { background: #FAFBFD; }
           <label class="photo-area" for="recPhotoInput">
             <div class="icon">📷</div>
             <div class="text">แตะเพื่อถ่ายหรือเลือกรูป</div>
-            <div class="hint" id="photoHint">เลือกรูปจำนวนเท่ากับวันที่ (ระบบจะสุ่มจับคู่ให้)</div>
+            <div class="hint" id="photoHint">ระบบสุ่มจับคู่รูปกับวันที่</div>
           </label>
           <input type="file" id="recPhotoInput" accept="image/*" multiple>
           <div id="recPhotoList" class="photo-grid"></div>
@@ -303,14 +326,14 @@ table tr:hover td { background: #FAFBFD; }
 
         <div class="field">
           <label>7. หมายเหตุ (ไม่บังคับ)</label>
-          <textarea id="recNote" placeholder="เช่น สังเกตอาการ, การให้คำแนะนำ"></textarea>
+          <textarea id="recNote" placeholder="เช่น สังเกตอาการ"></textarea>
         </div>
 
         <button class="btn btn-primary btn-lg" id="recSubmitBtn" onclick="submitRecord()">💾 บันทึกข้อมูล</button>
       </div>
     </div>
 
-    <!-- =============== TAB: CG =============== -->
+    <!-- CG -->
     <div id="tab-cg" class="tab-content hidden">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
@@ -321,7 +344,7 @@ table tr:hover td { background: #FAFBFD; }
       </div>
     </div>
 
-    <!-- =============== TAB: ELDERLY =============== -->
+    <!-- ELDERLY -->
     <div id="tab-elderly" class="tab-content hidden">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
@@ -333,18 +356,18 @@ table tr:hover td { background: #FAFBFD; }
           <select id="filterCG" onchange="renderElderlyTable()">
             <option value="">-- ทั้งหมด --</option>
           </select>
-          <label>โหมด PDF:</label>
+          <label id="filterModeLabel">โหมด PDF:</label>
           <select id="filterMode" onchange="renderElderlyTable()">
             <option value="">-- ทั้งหมด --</option>
-            <option value="normal">แบบปกติ (4 รูป)</option>
-            <option value="obt">แบบ อบต. (10-12 รูป)</option>
+            <option value="normal">แบบปกติ</option>
+            <option value="obt">แบบ อบต.</option>
           </select>
         </div>
         <div id="elderlyTable" class="table-responsive"></div>
       </div>
     </div>
 
-    <!-- =============== TAB: REPORT =============== -->
+    <!-- REPORT -->
     <div id="tab-report" class="tab-content hidden">
       <div class="card">
         <h2>📄 สร้าง PDF สรุปการเยี่ยมรายเดือน</h2>
@@ -368,23 +391,12 @@ table tr:hover td { background: #FAFBFD; }
         <button class="btn btn-success btn-lg" id="rptBtn" onclick="generatePDF()">📄 สร้าง PDF</button>
         <div id="rptResult" style="margin-top:14px;"></div>
       </div>
-
-      <div class="card">
-        <h3>📋 ตัวอย่างรายงานที่จะสร้าง</h3>
-        <div class="alert alert-info">
-          <strong>แบบปกติ (4 รูป/หน้า):</strong> สำหรับผู้สูงอายุที่เยี่ยมเดือนละ ~4 ครั้ง<br>
-          <strong>แบบ อบต. (10-12 รูป/หน้า):</strong> สำหรับผู้สูงอายุที่เยี่ยมเดือนละ 10-12 ครั้ง พร้อมแสดงวันที่เป็น "วันที่ 1,4,6,8,..."<br>
-          <small style="color:#888;">• 10 รูป → grid 5×2 | 11-12 รูป → grid 4×3 | เกิน 12 รูป → ขึ้นหน้าใหม่</small>
-        </div>
-      </div>
     </div>
 
   </div>
 </div>
 
-<!-- ============================ -->
-<!-- MODAL: ADD/EDIT CG           -->
-<!-- ============================ -->
+<!-- Modals -->
 <div class="modal" id="cgModal">
   <div class="modal-content">
     <h3 id="cgModalTitle">เพิ่ม CG</h3>
@@ -402,8 +414,6 @@ table tr:hover td { background: #FAFBFD; }
         <label>หมู่ที่</label>
         <select id="cgMoo">
           <option value="">--</option>
-          <option value="13">หมู่ 13</option>
-          <option value="15">หมู่ 15</option>
         </select>
       </div>
     </div>
@@ -418,9 +428,6 @@ table tr:hover td { background: #FAFBFD; }
   </div>
 </div>
 
-<!-- ============================ -->
-<!-- MODAL: ADD/EDIT ELDERLY      -->
-<!-- ============================ -->
 <div class="modal" id="elderlyModal">
   <div class="modal-content">
     <h3 id="elderlyModalTitle">เพิ่มผู้สูงอายุ</h3>
@@ -468,8 +475,6 @@ table tr:hover td { background: #FAFBFD; }
         <label>หมู่ที่ *</label>
         <select id="elMoo">
           <option value="">--</option>
-          <option value="13">หมู่ 13</option>
-          <option value="15">หมู่ 15</option>
         </select>
       </div>
     </div>
@@ -480,10 +485,10 @@ table tr:hover td { background: #FAFBFD; }
           <option value="">-- เลือก CG --</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" id="elPdfModeField">
         <label>โหมด PDF *</label>
         <select id="elPdfMode">
-          <option value="normal">แบบปกติ (4 รูป/หน้า)</option>
+          <option value="normal">แบบปกติ</option>
           <option value="obt">แบบ อบต. (10-12 รูป/หน้า)</option>
         </select>
       </div>
@@ -495,9 +500,6 @@ table tr:hover td { background: #FAFBFD; }
   </div>
 </div>
 
-<!-- ============================ -->
-<!-- MODAL: DATE PICKER           -->
-<!-- ============================ -->
 <div class="modal" id="dateModal">
   <div class="modal-content" style="max-width:380px;">
     <h3>📅 เลือกวันที่เยี่ยม</h3>
@@ -512,22 +514,6 @@ table tr:hover td { background: #FAFBFD; }
   </div>
 </div>
 
-<!-- ============================ -->
-<!-- MODAL: VISIT DETAIL          -->
-<!-- ============================ -->
-<div class="modal" id="visitDetailModal">
-  <div class="modal-content" style="max-width:700px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h3 id="visitDetailTitle">รายละเอียดการเยี่ยม</h3>
-      <button class="btn btn-secondary btn-sm" onclick="closeModal('visitDetailModal')">✕ ปิด</button>
-    </div>
-    <div id="visitDetailContent"></div>
-  </div>
-</div>
-
-<!-- ============================ -->
-<!-- MODAL: EDIT SINGLE VISIT     -->
-<!-- ============================ -->
 <div class="modal" id="editVisitModal">
   <div class="modal-content" style="max-width:480px;">
     <h3>✏️ แก้ไขรายการเยี่ยม</h3>
@@ -553,9 +539,6 @@ table tr:hover td { background: #FAFBFD; }
   </div>
 </div>
 
-<!-- ============================ -->
-<!-- CONFIRM DIALOG               -->
-<!-- ============================ -->
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-icon" id="confirmIcon">⚠️</div>
@@ -568,7 +551,6 @@ table tr:hover td { background: #FAFBFD; }
   </div>
 </div>
 
-<!-- PDF render area (hidden, used for html2canvas) -->
 <div id="pdfRender" style="position:fixed;left:-99999px;top:0;width:794px;background:white;"></div>
 
 <script>
@@ -590,110 +572,246 @@ const THAI_MONTHS = ['', 'มกราคม','กุมภาพันธ์','
 const THAI_MONTHS_SHORT = ['', 'ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
 // ============================================
-// SEED DATA - ข้อมูลตั้งต้น 24 คน
+// HOSPITAL CONFIGS
 // ============================================
-const SEED_CGS = [
-  { code: 'CG001', name: 'นางสาววินิจ หัสดง', phone: '', moo: '', houseNo: '', status: 'active' },
-  { code: 'CG002', name: 'นางสาวศุภานัน มุ่งมาตร', phone: '', moo: '', houseNo: '', status: 'active' }
-];
-
-const SEED_ELDERLY = [
-  // CG001 - วินิจ (15 คน) - ทั้งหมดโหมดปกติ
-  { id: 'E001', name: 'นายอั่น ทันงาม', age: 92, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E002', name: 'นางสาวสกุณา สุดแก้ว', age: 24, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E003', name: 'นางสา วิลาช', age: 84, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E004', name: 'นายเกลี้ยง วิลาช', age: 87, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E005', name: 'นางเสาร์ สีดาชาติ', age: 85, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E006', name: 'นายวิเชียร พุ่มผล', age: 41, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E007', name: 'พระประทิน เทียนแดง', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E008', name: 'นายบุญช่วย ไสว', age: 53, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E009', name: 'นางสมศรี ศรีเสริม', age: 72, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E010', name: 'นายใสว บุญขาว', age: 81, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E011', name: 'นายชนม์ นันทร', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E012', name: 'นางลิม น้อยศรี', age: 85, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E013', name: 'นายเลี่ยน หัสดง', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E014', name: 'นางสมจิตร หัสดง', age: 59, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
-  { id: 'E015', name: 'นางสาวประพัมศรี บุญเลิศ', age: 52, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
-  // CG002 - ศุภานัน (3 ปกติ + 6 อบต.)
-  { id: 'E016', name: 'นางลิม รัตนพันธ์', age: 80, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
-  { id: 'E017', name: 'นางทุม ลมเชย', age: 76, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
-  { id: 'E018', name: 'นางรมย์ แก้วกันหา', age: 76, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
-  { id: 'E019', name: 'นางบุตร สุยไสย์', age: 71, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'obt' },
-  { id: 'E020', name: 'นายกิ ชินทอง', age: 80, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
-  { id: 'E021', name: 'นายเวง สระเสรี', age: 86, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
-  { id: 'E022', name: 'นายณัฐพงษ์ งำตั้ว', age: 29, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
-  { id: 'E023', name: 'นายประดิษฐ์ ศรีปราชญ์', age: 69, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
-  { id: 'E024', name: 'นายเสริฐ บ่งบุตร', age: 69, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' }
-];
+const HOSPITALS = {
+  thapthimsiam: {
+    id: 'thapthimsiam',
+    name: 'รพ.สต.ทับทิมสยาม 07',
+    fullName: 'ต.บักดอง อ.ขุนหาญ จ.ศรีสะเกษ',
+    dbPrefix: 'thapthimsiam',  // key in Firebase
+    color: 'green',  // header
+    mooOptions: ['13', '15'],
+    hasObtMode: true,  // มีโหมด อบต.
+    seedCGs: [
+      { code: 'CG001', name: 'นางสาววินิจ หัสดง', phone: '', moo: '', houseNo: '' },
+      { code: 'CG002', name: 'นางสาวศุภานัน มุ่งมาตร', phone: '', moo: '', houseNo: '' }
+    ],
+    seedElderly: [
+      { id: 'E001', name: 'นายอั่น ทันงาม', age: 92, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E002', name: 'นางสาวสกุณา สุดแก้ว', age: 24, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E003', name: 'นางสา วิลาช', age: 84, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E004', name: 'นายเกลี้ยง วิลาช', age: 87, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E005', name: 'นางเสาร์ สีดาชาติ', age: 85, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E006', name: 'นายวิเชียร พุ่มผล', age: 41, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E007', name: 'พระประทิน เทียนแดง', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E008', name: 'นายบุญช่วย ไสว', age: 53, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E009', name: 'นางสมศรี ศรีเสริม', age: 72, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E010', name: 'นายใสว บุญขาว', age: 81, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E011', name: 'นายชนม์ นันทร', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E012', name: 'นางลิม น้อยศรี', age: 85, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E013', name: 'นายเลี่ยน หัสดง', age: 68, gender: 'ชาย', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E014', name: 'นางสมจิตร หัสดง', age: 59, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E015', name: 'นางสาวประพัมศรี บุญเลิศ', age: 52, gender: 'หญิง', cgCode: 'CG001', pdfMode: 'normal' },
+      { id: 'E016', name: 'นางลิม รัตนพันธ์', age: 80, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
+      { id: 'E017', name: 'นางทุม ลมเชย', age: 76, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
+      { id: 'E018', name: 'นางรมย์ แก้วกันหา', age: 76, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'normal' },
+      { id: 'E019', name: 'นางบุตร สุยไสย์', age: 71, gender: 'หญิง', cgCode: 'CG002', pdfMode: 'obt' },
+      { id: 'E020', name: 'นายกิ ชินทอง', age: 80, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+      { id: 'E021', name: 'นายเวง สระเสรี', age: 86, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+      { id: 'E022', name: 'นายณัฐพงษ์ งำตั้ว', age: 29, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+      { id: 'E023', name: 'นายประดิษฐ์ ศรีปราชญ์', age: 69, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' },
+      { id: 'E024', name: 'นายเสริฐ บ่งบุตร', age: 69, gender: 'ชาย', cgCode: 'CG002', pdfMode: 'obt' }
+    ]
+  },
+  samrongkiat: {
+    id: 'samrongkiat',
+    name: 'รพ.สต.สำโรงเกียรติ',
+    fullName: 'ต.บักดอง อ.ขุนหาญ จ.ศรีสะเกษ',
+    dbPrefix: 'samrongkiat',
+    color: 'blue',
+    mooOptions: ['5', '7', '8', '9', '20', '21'],
+    hasObtMode: false,  // ไม่มีโหมด อบต. — โหมดปกติทั้งหมด
+    seedCGs: [
+      { code: 'SR001', name: 'นางเย็นฤดี พงษ์วัน', phone: '087-346-6282', moo: '5', houseNo: '' },
+      { code: 'SR002', name: 'นางวณิชกรณ์ สารเดช', phone: '094-513-6441', moo: '21', houseNo: '' },
+      { code: 'SR003', name: 'นางเดือนนภา ศรีวงค์', phone: '093-095-7280', moo: '9', houseNo: '' },
+      { code: 'SR004', name: 'นางสิริรัฐ ค้ำใบ', phone: '065-116-4890', moo: '20', houseNo: '' },
+      { code: 'SR005', name: 'นางนิตยา นิลทอง', phone: '086-875-4106', moo: '8', houseNo: '' },
+      { code: 'SR006', name: 'นางคำ ชมภูพื้น', phone: '081-561-8179', moo: '7', houseNo: '' }
+    ],
+    seedElderly: [
+      // หมู่ 5 - SR001 นางเย็นฤดี พงษ์วัน
+      { id: 'SE001', name: 'นายเสน บุตรสัมฤทธิ์', age: 58, gender: 'ชาย', moo: '5', cgCode: 'SR001', pdfMode: 'normal' },
+      { id: 'SE002', name: 'นางสำรอง วงพิทักษ์', age: 76, gender: 'หญิง', moo: '5', cgCode: 'SR001', pdfMode: 'normal' },
+      { id: 'SE003', name: 'นายเที่ยง บุญศรี', age: 89, gender: 'ชาย', moo: '5', cgCode: 'SR001', pdfMode: 'normal' },
+      { id: 'SE004', name: 'ด.ญ.ณัฏฐณิชา เรืองคำ', age: 7, gender: 'หญิง', moo: '5', cgCode: 'SR001', pdfMode: 'normal' },
+      { id: 'SE005', name: 'นายเยียด นิลทอง', age: 75, gender: 'ชาย', moo: '5', cgCode: 'SR001', pdfMode: 'normal' },
+      // หมู่ 7 - SR006 นางคำ ชมภูพื้น
+      { id: 'SE006', name: 'นายหัด ไชยทอง', age: 80, gender: 'ชาย', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      { id: 'SE007', name: 'นางลัด คำโท', age: 80, gender: 'หญิง', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      { id: 'SE008', name: 'นางที คำแก้ว', age: 84, gender: 'หญิง', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      { id: 'SE009', name: 'น.ส.รัชนี น้ำกรอง', age: 48, gender: 'หญิง', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      { id: 'SE010', name: 'นายทองจันทร์ สมศรี', age: 63, gender: 'ชาย', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      { id: 'SE011', name: 'นางสาวอภิสรา น้อยศรี', age: 19, gender: 'หญิง', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      { id: 'SE012', name: 'นายภานุพงค์ ไชยทอง', age: 46, gender: 'ชาย', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      { id: 'SE013', name: 'นางวิลัย อุทา', age: 65, gender: 'หญิง', moo: '7', cgCode: 'SR006', pdfMode: 'normal' },
+      // หมู่ 8 - SR005 นางนิตยา นิลทอง
+      { id: 'SE014', name: 'นางบุญเรือง แก้วภักดี', age: 89, gender: 'หญิง', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE015', name: 'นายศราวุฒิ เลิศศรี', age: 35, gender: 'ชาย', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE016', name: 'นางสมุทร นิลสุข', age: 93, gender: 'หญิง', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE017', name: 'ด.ญ.น้อง จันทิมา', age: 30, gender: 'หญิง', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE018', name: 'นายเพียร น้ำกรอง', age: 85, gender: 'ชาย', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE019', name: 'นายสุทิน นิลทอง', age: 71, gender: 'ชาย', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE020', name: 'นางสอน น้ำกรอง', age: 93, gender: 'หญิง', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE021', name: 'นายวัน พรหมนาม', age: 59, gender: 'ชาย', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      { id: 'SE022', name: 'นางเยือน คำใส', age: 70, gender: 'หญิง', moo: '8', cgCode: 'SR005', pdfMode: 'normal' },
+      // หมู่ 9 - SR003 นางเดือนนภา ศรีวงค์
+      { id: 'SE023', name: 'นายเคลย เจริญศรีเมือง', age: 68, gender: 'ชาย', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE024', name: 'นางเลือน นันทร', age: 58, gender: 'หญิง', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE025', name: 'นางสาย นาคยอง', age: 78, gender: 'หญิง', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE026', name: 'นางเสมย นันทร', age: 78, gender: 'หญิง', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE027', name: 'นางสำอาง ถือผล', age: 84, gender: 'หญิง', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE028', name: 'นางเนย แถบหอม', age: 79, gender: 'หญิง', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE029', name: 'นายบุญร่วม สายเสนีย์', age: 79, gender: 'ชาย', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE030', name: 'นายเสมือน ประหม่า', age: 75, gender: 'ชาย', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE031', name: 'นายเจษฎา ขันติวงศ์', age: 66, gender: 'ชาย', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE032', name: 'นายกลัน พลเมือง', age: 88, gender: 'ชาย', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE033', name: 'นายไสว แสงสมุทร', age: 46, gender: 'ชาย', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      { id: 'SE034', name: 'นางสุมินทร์ ดอกบัว', age: 83, gender: 'หญิง', moo: '9', cgCode: 'SR003', pdfMode: 'normal' },
+      // หมู่ 20 - SR004 นางสิริรัฐ ค้ำใบ
+      { id: 'SE035', name: 'นายสมพงษ์ ชอบธรรม', age: 74, gender: 'ชาย', moo: '20', cgCode: 'SR004', pdfMode: 'normal' },
+      { id: 'SE036', name: 'ด.ญ.ขวัญจิรา โสดามุข', age: 25, gender: 'หญิง', moo: '20', cgCode: 'SR004', pdfMode: 'normal' },
+      { id: 'SE037', name: 'ด.ช.อดิศร นรเนตร', age: 13, gender: 'ชาย', moo: '20', cgCode: 'SR004', pdfMode: 'normal' },
+      { id: 'SE038', name: 'นางสอน นิลทอง', age: 88, gender: 'หญิง', moo: '20', cgCode: 'SR004', pdfMode: 'normal' },
+      // หมู่ 21 - SR002 นางวณิชกรณ์ สารเดช
+      { id: 'SE039', name: 'นายเกิน เดชแก้ว', age: 72, gender: 'ชาย', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE040', name: 'นางปริด พลคำ', age: 97, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE041', name: 'นายสุมนต์ พลคำ', age: 68, gender: 'ชาย', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE042', name: 'นายภิรมย์ สายเสนีย์', age: 55, gender: 'ชาย', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE043', name: 'นางโฮม จันทร', age: 91, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE044', name: 'นางประมวล หอมหวาน', age: 79, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE045', name: 'นางวิเชียร เนียนแนบ', age: 88, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE046', name: 'นางสุวิทย์ ภิญโญ', age: 89, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE047', name: 'น.ส.เลียน ดวงแก้ว', age: 58, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE048', name: 'น.ส.เม็ด ประหม่า', age: 77, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE049', name: 'นางสมุด เนียมพันธ์', age: 80, gender: 'หญิง', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE050', name: 'นายหนู บุตรสัมฤทธิ์', age: 64, gender: 'ชาย', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE051', name: 'นายบุญเลี้ยง ขันติวงศ์', age: 81, gender: 'ชาย', moo: '21', cgCode: 'SR002', pdfMode: 'normal' },
+      { id: 'SE052', name: 'นายหอม พรมน้ำ', age: 90, gender: 'ชาย', moo: '21', cgCode: 'SR002', pdfMode: 'normal' }
+    ]
+  }
+};
 
 // ============================================
 // STATE
 // ============================================
 let firebaseDB = null;
+let currentHospital = null;  // 'thapthimsiam' | 'samrongkiat'
 let imgbbKey = IMGBB_API_KEY;
 let allCGs = [];
 let allElderly = [];
 let allVisits = [];
-
-// Record state
-let recSelectedDates = []; // ['2026-03-01', ...]
-let recSelectedPhotos = []; // [{dataUrl, blob}]
+let recSelectedDates = [];
+let recSelectedPhotos = [];
 let datePickerSelected = [];
-
-// Confirm state
 let confirmCallback = null;
+let visitsListener = null;
+let cgsListener = null;
+let elderlyListener = null;
 
 // ============================================
-// BOOT - เริ่มระบบทันที
+// BOOT
 // ============================================
-document.addEventListener('DOMContentLoaded', async function() {
-  // Init Firebase ทันที
+document.addEventListener('DOMContentLoaded', function() {
   firebase.initializeApp(FIREBASE_CONFIG);
   firebaseDB = firebase.database();
 
-  // Seed ข้อมูลครั้งแรก (ถ้ายังไม่มี)
-  await seedDataIfEmpty();
-
-  // เริ่มแอป
-  initApp();
+  const saved = sessionStorage.getItem('selectedHospital');
+  if (saved && HOSPITALS[saved]) {
+    selectHospital(saved);
+  }
 });
 
-async function seedDataIfEmpty() {
+// ============================================
+// HOSPITAL SELECTION
+// ============================================
+async function selectHospital(id) {
+  const cfg = HOSPITALS[id];
+  if (!cfg) return;
+
+  currentHospital = id;
+  sessionStorage.setItem('selectedHospital', id);
+
+  document.getElementById('hospitalScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+
+  const header = document.getElementById('mainHeader');
+  if (cfg.color === 'blue') header.classList.add('blue'); else header.classList.remove('blue');
+  document.getElementById('headerTitle').textContent = '📋 ' + cfg.name;
+  document.getElementById('headerSubtitle').textContent = cfg.fullName;
+
+  // Setup moo options
+  updateMooOptions(cfg.mooOptions);
+
+  // Show/hide obt mode filter
+  document.getElementById('filterModeLabel').style.display = cfg.hasObtMode ? '' : 'none';
+  document.getElementById('filterMode').style.display = cfg.hasObtMode ? '' : 'none';
+  document.getElementById('elPdfModeField').style.display = cfg.hasObtMode ? '' : 'none';
+
+  // Seed if empty
+  await seedDataIfEmpty(cfg);
+
+  // Init app
+  initApp();
+}
+
+function updateMooOptions(options) {
+  const html = '<option value="">--</option>' + options.map(m => `<option value="${m}">หมู่ ${m}</option>`).join('');
+  ['cgMoo', 'elMoo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function backToHospitalSelector() {
+  // Detach listeners
+  const prefix = HOSPITALS[currentHospital].dbPrefix;
+  if (cgsListener) firebaseDB.ref(prefix + '/cgs').off('value', cgsListener);
+  if (elderlyListener) firebaseDB.ref(prefix + '/elderly').off('value', elderlyListener);
+  if (visitsListener) firebaseDB.ref(prefix + '/visits').off('value', visitsListener);
+
+  currentHospital = null;
+  sessionStorage.removeItem('selectedHospital');
+  allCGs = [];
+  allElderly = [];
+  allVisits = [];
+
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('hospitalScreen').classList.remove('hidden');
+}
+
+async function seedDataIfEmpty(cfg) {
   try {
-    // เช็คว่ามี CG หรือยัง
-    const snap = await firebaseDB.ref('cgs').once('value');
+    const snap = await firebaseDB.ref(cfg.dbPrefix + '/cgs').once('value');
     const data = snap.val();
-    if (data && Object.keys(data).length > 0) {
-      return; // มีข้อมูลอยู่แล้ว ไม่ต้อง seed
-    }
+    if (data && Object.keys(data).length > 0) return;
 
-    console.log('Seeding initial data...');
     const now = new Date().toISOString();
-
-    // Seed CGs
-    for (const cg of SEED_CGS) {
+    for (const cg of cfg.seedCGs) {
       const { code, ...rest } = cg;
-      await firebaseDB.ref('cgs/' + code).set({ ...rest, createdAt: now });
+      await firebaseDB.ref(cfg.dbPrefix + '/cgs/' + code).set({ ...rest, status: 'active', createdAt: now });
     }
-
-    // Seed Elderly
-    for (const e of SEED_ELDERLY) {
+    for (const e of cfg.seedElderly) {
       const { id, ...rest } = e;
-      await firebaseDB.ref('elderly/' + id).set({
-        ...rest,
+      await firebaseDB.ref(cfg.dbPrefix + '/elderly/' + id).set({
         hn: '',
         houseNo: '',
-        moo: '',
         adlGroup: '',
+        moo: rest.moo || '',
+        ...rest,
         status: 'active',
         createdAt: now
       });
     }
-
-    console.log('Seeded ' + SEED_CGS.length + ' CGs and ' + SEED_ELDERLY.length + ' elderly');
+    console.log(`Seeded ${cfg.name}: ${cfg.seedCGs.length} CGs, ${cfg.seedElderly.length} elderly`);
   } catch (e) {
     console.error('Seed failed:', e);
   }
+}
+
+function getDBPrefix() {
+  return HOSPITALS[currentHospital].dbPrefix;
 }
 
 function initApp() {
@@ -702,18 +820,15 @@ function initApp() {
   loadAllData();
 }
 
-// ============================================
-// TABS
-// ============================================
 function setupTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', function() {
+    tab.onclick = function() {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
       this.classList.add('active');
       const target = document.getElementById('tab-' + this.dataset.tab);
       if (target) target.classList.remove('hidden');
-    });
+    };
   });
 }
 
@@ -734,15 +849,13 @@ function initMonthYearSelectors() {
   ['dashMonth', 'recMonth', 'rptMonth'].forEach(id => document.getElementById(id).innerHTML = monthHTML);
   ['dashYear', 'recYear', 'rptYear'].forEach(id => document.getElementById(id).innerHTML = yearHTML);
 
-  ['dashMonth', 'dashYear'].forEach(id => document.getElementById(id).addEventListener('change', loadDashboard));
+  ['dashMonth', 'dashYear'].forEach(id => document.getElementById(id).onchange = loadDashboard);
 }
 
-// ============================================
-// FIREBASE DATA
-// ============================================
 function loadAllData() {
-  // Real-time sync ทั้ง 3 collection
-  firebaseDB.ref('cgs').on('value', snap => {
+  const prefix = getDBPrefix();
+
+  cgsListener = firebaseDB.ref(prefix + '/cgs').on('value', snap => {
     const data = snap.val() || {};
     allCGs = Object.keys(data).map(k => ({ ...data[k], code: k }));
     renderCGTable();
@@ -750,14 +863,14 @@ function loadAllData() {
     loadDashboard();
   });
 
-  firebaseDB.ref('elderly').on('value', snap => {
+  elderlyListener = firebaseDB.ref(prefix + '/elderly').on('value', snap => {
     const data = snap.val() || {};
     allElderly = Object.keys(data).map(k => ({ ...data[k], id: k }));
     renderElderlyTable();
     loadDashboard();
   });
 
-  firebaseDB.ref('visits').on('value', snap => {
+  visitsListener = firebaseDB.ref(prefix + '/visits').on('value', snap => {
     const data = snap.val() || {};
     allVisits = Object.keys(data).map(k => ({ ...data[k], id: k }));
     loadDashboard();
@@ -800,15 +913,16 @@ async function saveCG() {
   const editCode = document.getElementById('cgEditCode').value;
   const btn = document.getElementById('cgSaveBtn');
   btn.disabled = true;
+  const prefix = getDBPrefix();
 
   try {
     if (editCode) {
-      await firebaseDB.ref('cgs/' + editCode).update(data);
+      await firebaseDB.ref(prefix + '/cgs/' + editCode).update(data);
       showToast('แก้ไข ' + data.name + ' สำเร็จ');
     } else {
       const code = await generateCGCode();
       data.createdAt = new Date().toISOString();
-      await firebaseDB.ref('cgs/' + code).set(data);
+      await firebaseDB.ref(prefix + '/cgs/' + code).set(data);
       showToast('เพิ่ม ' + data.name + ' สำเร็จ');
     }
     closeModal('cgModal');
@@ -820,11 +934,12 @@ async function saveCG() {
 }
 
 async function generateCGCode() {
+  const prefix = currentHospital === 'samrongkiat' ? 'SR' : 'CG';
   const maxNum = allCGs.reduce((max, cg) => {
-    const num = parseInt(cg.code.replace('CG', '')) || 0;
+    const num = parseInt(cg.code.replace(/^[A-Z]+/, '')) || 0;
     return num > max ? num : max;
   }, 0);
-  return 'CG' + String(maxNum + 1).padStart(3, '0');
+  return prefix + String(maxNum + 1).padStart(3, '0');
 }
 
 function confirmDeleteCG(code) {
@@ -837,7 +952,7 @@ function confirmDeleteCG(code) {
   }
   showConfirm('🗑', 'ลบ CG ' + cg.name + '?', 'ข้อมูลจะหายไปและไม่สามารถกู้คืนได้', async function() {
     try {
-      await firebaseDB.ref('cgs/' + code).remove();
+      await firebaseDB.ref(getDBPrefix() + '/cgs/' + code).remove();
       showToast('ลบ ' + cg.name + ' สำเร็จ');
     } catch (e) {
       alert('เกิดข้อผิดพลาด: ' + e.message);
@@ -915,6 +1030,7 @@ function editElderly(id) {
 }
 
 async function saveElderly() {
+  const cfg = HOSPITALS[currentHospital];
   const data = {
     name: document.getElementById('elName').value.trim(),
     hn: document.getElementById('elHN').value.trim(),
@@ -924,7 +1040,7 @@ async function saveElderly() {
     moo: document.getElementById('elMoo').value,
     adlGroup: document.getElementById('elADL').value,
     cgCode: document.getElementById('elCG').value,
-    pdfMode: document.getElementById('elPdfMode').value || 'normal',
+    pdfMode: cfg.hasObtMode ? (document.getElementById('elPdfMode').value || 'normal') : 'normal',
     status: 'active'
   };
   if (!data.name) { alert('กรุณาใส่ชื่อ'); return; }
@@ -934,15 +1050,16 @@ async function saveElderly() {
   const editId = document.getElementById('elEditId').value;
   const btn = document.getElementById('elSaveBtn');
   btn.disabled = true;
+  const prefix = getDBPrefix();
 
   try {
     if (editId) {
-      await firebaseDB.ref('elderly/' + editId).update(data);
+      await firebaseDB.ref(prefix + '/elderly/' + editId).update(data);
       showToast('แก้ไข ' + data.name + ' สำเร็จ');
     } else {
       const id = await generateElderlyId();
       data.createdAt = new Date().toISOString();
-      await firebaseDB.ref('elderly/' + id).set(data);
+      await firebaseDB.ref(prefix + '/elderly/' + id).set(data);
       showToast('เพิ่ม ' + data.name + ' สำเร็จ');
     }
     closeModal('elderlyModal');
@@ -954,11 +1071,12 @@ async function saveElderly() {
 }
 
 async function generateElderlyId() {
+  const prefix = currentHospital === 'samrongkiat' ? 'SE' : 'E';
   const maxNum = allElderly.reduce((max, e) => {
-    const num = parseInt(e.id.replace('E', '')) || 0;
+    const num = parseInt(e.id.replace(/^[A-Z]+/, '')) || 0;
     return num > max ? num : max;
   }, 0);
-  return 'E' + String(maxNum + 1).padStart(3, '0');
+  return prefix + String(maxNum + 1).padStart(3, '0');
 }
 
 function confirmDeleteElderly(id) {
@@ -966,12 +1084,12 @@ function confirmDeleteElderly(id) {
   if (!e) return;
   showConfirm('🗑', 'ลบ ' + e.name + '?', 'ข้อมูลและการเยี่ยมที่บันทึกไว้จะหายไปทั้งหมด', async function() {
     try {
-      // ลบ visits ของคนนี้ด้วย
+      const prefix = getDBPrefix();
       const visitsToDelete = allVisits.filter(v => v.elderlyId === id);
       for (const v of visitsToDelete) {
-        await firebaseDB.ref('visits/' + v.id).remove();
+        await firebaseDB.ref(prefix + '/visits/' + v.id).remove();
       }
-      await firebaseDB.ref('elderly/' + id).remove();
+      await firebaseDB.ref(prefix + '/elderly/' + id).remove();
       showToast('ลบ ' + e.name + ' สำเร็จ');
     } catch (e) {
       alert('เกิดข้อผิดพลาด: ' + e.message);
@@ -982,6 +1100,7 @@ function confirmDeleteElderly(id) {
 function renderElderlyTable() {
   const div = document.getElementById('elderlyTable');
   if (!div) return;
+  const cfg = HOSPITALS[currentHospital];
   const filterCG = document.getElementById('filterCG').value;
   const filterMode = document.getElementById('filterMode').value;
   let list = allElderly;
@@ -993,20 +1112,25 @@ function renderElderlyTable() {
     return;
   }
 
-  let html = '<table><thead><tr><th>ชื่อ-สกุล</th><th>อายุ</th><th>หมู่</th><th>ADL</th><th>CG</th><th>โหมด PDF</th><th></th></tr></thead><tbody>';
+  const showMode = cfg && cfg.hasObtMode;
+  let html = '<table><thead><tr><th>ชื่อ-สกุล</th><th>อายุ</th><th>หมู่</th><th>ADL</th><th>CG</th>';
+  if (showMode) html += '<th>โหมด PDF</th>';
+  html += '<th></th></tr></thead><tbody>';
   list.forEach(e => {
     const cg = allCGs.find(c => c.code === e.cgCode);
-    const modeBadge = (e.pdfMode === 'obt')
-      ? '<span class="badge badge-purple">อบต. (10-12 รูป)</span>'
-      : '<span class="badge badge-info">ปกติ (4 รูป)</span>';
     html += `<tr>
       <td><strong>${e.name}</strong>${e.hn ? '<br><small style="color:#888;">HN: ' + e.hn + '</small>' : ''}</td>
       <td>${e.age || '-'}</td>
       <td>${e.moo ? 'หมู่ ' + e.moo : '-'}</td>
       <td>${e.adlGroup || '-'}</td>
-      <td>${cg ? cg.name : '<span style="color:#D85A30;">ไม่พบ CG</span>'}</td>
-      <td>${modeBadge}</td>
-      <td class="actions">
+      <td>${cg ? cg.name : '<span style="color:#D85A30;">ไม่พบ CG</span>'}</td>`;
+    if (showMode) {
+      const modeBadge = (e.pdfMode === 'obt')
+        ? '<span class="badge badge-purple">อบต. (10-12 รูป)</span>'
+        : '<span class="badge badge-info">ปกติ</span>';
+      html += `<td>${modeBadge}</td>`;
+    }
+    html += `<td class="actions">
         <button class="btn btn-secondary btn-sm" onclick="editElderly('${e.id}')">แก้ไข</button>
         <button class="btn btn-danger btn-sm" onclick="confirmDeleteElderly('${e.id}')">ลบ</button>
       </td>
@@ -1036,33 +1160,23 @@ function onRecCGChange() {
 function onRecElderlyChange() {
   const id = document.getElementById('recElderly').value;
   const info = document.getElementById('recElderlyInfo');
-  const photoHint = document.getElementById('photoHint');
-  const datesHint = document.getElementById('datesHint');
   const dayCountInput = document.getElementById('recDayCount');
 
-  if (!id) {
-    info.classList.add('hidden');
-    return;
-  }
+  if (!id) { info.classList.add('hidden'); return; }
   const e = allElderly.find(x => x.id === id);
   if (!e) return;
 
   const mode = e.pdfMode || 'normal';
   if (mode === 'obt') {
-    info.innerHTML = `<strong>${e.name}</strong> | อายุ ${e.age || '-'} ปี | <span class="badge badge-purple">โหมด อบต. (10-12 รูป/หน้า)</span><br>เยี่ยมเดือนละ 10-12 ครั้ง`;
-    photoHint.textContent = 'ใส่ 10-12 รูป (เท่ากับจำนวนวัน) — ระบบจะสุ่มจับคู่กับวันที่';
-    datesHint.textContent = 'เลือก 10-12 วันในเดือนนั้น (ถ้าเกิน 12 จะขึ้นหน้าใหม่)';
+    info.innerHTML = `<strong>${e.name}</strong> | อายุ ${e.age || '-'} ปี | <span class="badge badge-purple">โหมด อบต. (10-12 รูป/หน้า)</span>`;
     if (!dayCountInput.value) dayCountInput.value = 10;
   } else {
-    info.innerHTML = `<strong>${e.name}</strong> | อายุ ${e.age || '-'} ปี | <span class="badge badge-info">โหมดปกติ (4 รูป/หน้า)</span>`;
-    photoHint.textContent = 'ใส่ 4 รูป (หรือเท่ากับจำนวนวัน)';
-    datesHint.textContent = 'เลือกวันที่ในเดือนตามจำนวนที่ใส่ไว้';
+    info.innerHTML = `<strong>${e.name}</strong> | อายุ ${e.age || '-'} ปี | <span class="badge badge-info">โหมดปกติ</span> — อัปกี่รูปก็ได้ ระบบจัดหน้าให้พอดี A4`;
     if (!dayCountInput.value) dayCountInput.value = 4;
   }
   info.classList.remove('hidden');
 }
 
-// Date picker
 function openDatePicker() {
   const month = parseInt(document.getElementById('recMonth').value);
   const year = parseInt(document.getElementById('recYear').value);
@@ -1080,7 +1194,7 @@ function openDatePicker() {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const selected = datePickerSelected.includes(dateStr);
-    html += `<div class="date-cell ${selected ? 'sel' : ''}" data-date="${dateStr}" onclick="toggleDate('${dateStr}', this)" style="text-align:center;padding:10px 4px;cursor:pointer;border-radius:6px;font-size:14px;${selected ? 'background:#1D9E75;color:white;font-weight:600;' : 'background:#F5F7FA;'}">${d}</div>`;
+    html += `<div data-date="${dateStr}" onclick="toggleDate('${dateStr}', this)" style="text-align:center;padding:10px 4px;cursor:pointer;border-radius:6px;font-size:14px;${selected ? 'background:#1D9E75;color:white;font-weight:600;' : 'background:#F5F7FA;'}">${d}</div>`;
   }
   grid.innerHTML = html;
   updateDatePickerCount();
@@ -1132,11 +1246,9 @@ function removeDate(dateStr) {
   renderSelectedDates();
 }
 
-// Photo input
 document.addEventListener('change', function(e) {
-  if (e.target.id === 'recPhotoInput') {
-    handlePhotoInput(e.target);
-  }
+  if (e.target.id === 'recPhotoInput') handlePhotoInput(e.target);
+  if (e.target.id === 'editVisitPhoto') handleEditPhotoChange(e);
 });
 
 function handlePhotoInput(input) {
@@ -1146,7 +1258,6 @@ function handlePhotoInput(input) {
     reader.onload = function(ev) {
       const img = new Image();
       img.onload = function() {
-        // Resize ก่อนเก็บ (สำหรับแสดงผลและอัปโหลด)
         const canvas = document.createElement('canvas');
         const maxSize = 1200;
         let w = img.width, h = img.height;
@@ -1181,12 +1292,9 @@ function removePhoto(idx) {
   renderRecPhotos();
 }
 
-// Submit record
 async function submitRecord() {
   const cgCode = document.getElementById('recCG').value;
   const elderlyId = document.getElementById('recElderly').value;
-  const month = parseInt(document.getElementById('recMonth').value);
-  const year = parseInt(document.getElementById('recYear').value);
   const note = document.getElementById('recNote').value;
 
   if (!cgCode) { alert('กรุณาเลือก CG'); return; }
@@ -1196,20 +1304,20 @@ async function submitRecord() {
 
   const cg = allCGs.find(c => c.code === cgCode);
   const elderly = allElderly.find(e => e.id === elderlyId);
-  if (!cg || !elderly) { alert('ไม่พบข้อมูล CG หรือผู้สูงอายุ'); return; }
+  if (!cg || !elderly) { alert('ไม่พบข้อมูล'); return; }
 
-  // สุ่มจับคู่รูปกับวันที่
   const dates = [...recSelectedDates].sort();
   const shuffled = shuffleArray([...recSelectedPhotos]);
   const pairs = [];
   for (let i = 0; i < dates.length; i++) {
-    const photo = shuffled[i % shuffled.length]; // ถ้ารูปน้อยกว่าวัน จะวนซ้ำ
+    const photo = shuffled[i % shuffled.length];
     pairs.push({ date: dates[i], photo: photo });
   }
 
   const btn = document.getElementById('recSubmitBtn');
   btn.disabled = true;
   btn.innerHTML = '⏳ กำลังอัปโหลด... 0/' + pairs.length;
+  const prefix = getDBPrefix();
 
   try {
     let uploaded = 0;
@@ -1227,13 +1335,12 @@ async function submitRecord() {
         note: note,
         pdfMode: elderly.pdfMode || 'normal'
       };
-      await firebaseDB.ref('visits/' + visitId).set(visitData);
+      await firebaseDB.ref(prefix + '/visits/' + visitId).set(visitData);
       uploaded++;
       btn.innerHTML = '⏳ กำลังอัปโหลด... ' + uploaded + '/' + pairs.length;
     }
 
     showToast('✓ บันทึกสำเร็จ ' + pairs.length + ' รายการ');
-    // Reset form
     recSelectedDates = [];
     recSelectedPhotos = [];
     renderSelectedDates();
@@ -1258,18 +1365,14 @@ function shuffleArray(arr) {
   return arr;
 }
 
-// ============================================
-// ImgBB UPLOAD
-// ============================================
 async function uploadToImgBB(base64) {
   const formData = new FormData();
   formData.append('image', base64);
   const res = await fetch('https://api.imgbb.com/1/upload?key=' + imgbbKey, {
-    method: 'POST',
-    body: formData
+    method: 'POST', body: formData
   });
   const json = await res.json();
-  if (!json.success) throw new Error('ImgBB upload failed: ' + JSON.stringify(json));
+  if (!json.success) throw new Error('ImgBB upload failed');
   return json.data.url;
 }
 
@@ -1281,7 +1384,6 @@ function loadDashboard() {
   const month = parseInt(document.getElementById('dashMonth').value);
   const year = parseInt(document.getElementById('dashYear').value);
 
-  // Filter visits for this month
   const monthVisits = allVisits.filter(v => {
     if (!v.visitDate) return false;
     const d = new Date(v.visitDate);
@@ -1290,33 +1392,36 @@ function loadDashboard() {
 
   const visitedSet = new Set(monthVisits.map(v => v.elderlyId));
   const activeElderly = allElderly.filter(e => e.status !== 'inactive');
+  const cfg = HOSPITALS[currentHospital];
 
-  // Stats
   document.getElementById('dashStats').innerHTML = `
     <div class="grid-stats">
       <div class="stat info"><div class="label">CG ทั้งหมด</div><div class="value">${allCGs.length}</div></div>
       <div class="stat info"><div class="label">ผู้สูงอายุ</div><div class="value">${activeElderly.length}</div></div>
-      <div class="stat success"><div class="label">เยี่ยมแล้ว</div><div class="value">${visitedSet.size}</div><div class="sub">${activeElderly.length > 0 ? Math.round(visitedSet.size / activeElderly.length * 100) : 0}% ของทั้งหมด</div></div>
+      <div class="stat success"><div class="label">เยี่ยมแล้ว</div><div class="value">${visitedSet.size}</div><div class="sub">${activeElderly.length > 0 ? Math.round(visitedSet.size / activeElderly.length * 100) : 0}%</div></div>
       <div class="stat warning"><div class="label">ยังไม่ได้เยี่ยม</div><div class="value">${activeElderly.length - visitedSet.size}</div></div>
       <div class="stat danger"><div class="label">รวมจำนวนครั้ง</div><div class="value">${monthVisits.length}</div><div class="sub">ครั้ง/รูป</div></div>
     </div>`;
 
-  // Total stats (overall)
-  const totalNormal = activeElderly.filter(e => (e.pdfMode || 'normal') === 'normal').length;
-  const totalObt = activeElderly.filter(e => e.pdfMode === 'obt').length;
-  document.getElementById('dashTotal').innerHTML = `
-    <div class="grid-stats">
-      <div class="stat info"><div class="label">บันทึกทั้งหมด</div><div class="value">${allVisits.length}</div><div class="sub">ครั้ง</div></div>
-      <div class="stat info"><div class="label">โหมดปกติ</div><div class="value">${totalNormal}</div><div class="sub">คน (4 รูป/หน้า)</div></div>
-      <div class="stat info"><div class="label">โหมด อบต.</div><div class="value">${totalObt}</div><div class="sub">คน (10-12 รูป/หน้า)</div></div>
-    </div>`;
-
-  // CG breakdown
-  const div = document.getElementById('dashCgList');
-  if (allCGs.length === 0) {
-    div.innerHTML = '<div class="empty">ยังไม่มี CG</div>';
-    return;
+  if (cfg && cfg.hasObtMode) {
+    const totalNormal = activeElderly.filter(e => (e.pdfMode || 'normal') === 'normal').length;
+    const totalObt = activeElderly.filter(e => e.pdfMode === 'obt').length;
+    document.getElementById('dashTotal').innerHTML = `
+      <div class="grid-stats">
+        <div class="stat info"><div class="label">บันทึกทั้งหมด</div><div class="value">${allVisits.length}</div><div class="sub">ครั้ง</div></div>
+        <div class="stat info"><div class="label">โหมดปกติ</div><div class="value">${totalNormal}</div><div class="sub">คน</div></div>
+        <div class="stat info"><div class="label">โหมด อบต.</div><div class="value">${totalObt}</div><div class="sub">คน</div></div>
+      </div>`;
+  } else {
+    document.getElementById('dashTotal').innerHTML = `
+      <div class="grid-stats">
+        <div class="stat info"><div class="label">บันทึกทั้งหมด</div><div class="value">${allVisits.length}</div><div class="sub">ครั้ง</div></div>
+        <div class="stat info"><div class="label">ผู้สูงอายุ</div><div class="value">${activeElderly.length}</div><div class="sub">คน</div></div>
+      </div>`;
   }
+
+  const div = document.getElementById('dashCgList');
+  if (allCGs.length === 0) { div.innerHTML = '<div class="empty">ยังไม่มี CG</div>'; return; }
   let html = '<div class="table-responsive"><table><thead><tr><th>CG</th><th>ผู้สูงอายุ</th><th>เยี่ยมแล้ว</th><th>ครั้งที่เยี่ยม</th><th>ความก้าวหน้า</th></tr></thead><tbody>';
   allCGs.forEach(cg => {
     const cgElderly = activeElderly.filter(e => e.cgCode === cg.code);
@@ -1334,12 +1439,11 @@ function loadDashboard() {
   html += '</tbody></table></div>';
   div.innerHTML = html;
 
-  // Re-render browser too
   renderBrowser();
 }
 
 // ============================================
-// BROWSE / EDIT / DELETE VISITS
+// BROWSER (VIEW/EDIT/DELETE)
 // ============================================
 let browserState = { level: 'cg', cgCode: null, elderlyId: null };
 
@@ -1348,36 +1452,27 @@ function renderBrowser() {
   if (!div) return;
   const month = parseInt(document.getElementById('dashMonth').value);
   const year = parseInt(document.getElementById('dashYear').value);
-
   const monthVisits = allVisits.filter(v => {
     if (!v.visitDate) return false;
     const d = new Date(v.visitDate);
     return d.getFullYear() === year && (d.getMonth() + 1) === month;
   });
 
-  if (browserState.level === 'cg') {
-    renderBrowserCgLevel(div, monthVisits);
-  } else if (browserState.level === 'elderly') {
-    renderBrowserElderlyLevel(div, monthVisits);
-  } else if (browserState.level === 'visits') {
-    renderBrowserVisitsLevel(div, monthVisits);
-  }
+  if (browserState.level === 'cg') renderBrowserCgLevel(div, monthVisits);
+  else if (browserState.level === 'elderly') renderBrowserElderlyLevel(div, monthVisits);
+  else if (browserState.level === 'visits') renderBrowserVisitsLevel(div, monthVisits);
 }
 
 function renderBrowserCgLevel(div, monthVisits) {
   const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
   const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
-
-  // Group by CG
   const byCg = {};
   monthVisits.forEach(v => {
     if (!byCg[v.cgCode]) byCg[v.cgCode] = { cgCode: v.cgCode, cgName: v.cgName, count: 0, elderlySet: new Set() };
     byCg[v.cgCode].count++;
     byCg[v.cgCode].elderlySet.add(v.elderlyId);
   });
-
   let html = `<div class="breadcrumb"><span style="font-weight:500;">📁 ${monthName} ${buddhistYear}</span></div>`;
-
   if (Object.keys(byCg).length === 0) {
     html += '<div class="empty"><div class="icon">📭</div>ยังไม่มีข้อมูลบันทึกในเดือนนี้</div>';
   } else {
@@ -1400,39 +1495,28 @@ function renderBrowserElderlyLevel(div, monthVisits) {
   const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
   const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
   const cg = allCGs.find(c => c.code === browserState.cgCode);
-
   const cgVisits = monthVisits.filter(v => v.cgCode === browserState.cgCode);
   const byElderly = {};
   cgVisits.forEach(v => {
     if (!byElderly[v.elderlyId]) {
       const el = allElderly.find(e => e.id === v.elderlyId);
-      byElderly[v.elderlyId] = {
-        elderlyId: v.elderlyId,
-        elderlyName: v.elderlyName,
-        pdfMode: el ? el.pdfMode : 'normal',
-        count: 0
-      };
+      byElderly[v.elderlyId] = { elderlyId: v.elderlyId, elderlyName: v.elderlyName, pdfMode: el ? el.pdfMode : 'normal', count: 0 };
     }
     byElderly[v.elderlyId].count++;
   });
-
   let html = `<div class="breadcrumb">
     <span class="crumb" onclick="exitBrowser()">📁 ${monthName} ${buddhistYear}</span>
     <span class="sep">›</span>
     <span style="font-weight:500;">${cg ? cg.name : '-'}</span>
   </div>`;
-
   if (Object.keys(byElderly).length === 0) {
     html += '<div class="empty">ไม่มีข้อมูล</div>';
   } else {
     Object.values(byElderly).forEach(item => {
-      const modeBadge = item.pdfMode === 'obt'
-        ? '<span class="badge badge-purple" style="margin-left:6px;">อบต.</span>'
-        : '<span class="badge badge-info" style="margin-left:6px;">ปกติ</span>';
       html += `<div class="browser-row" onclick="enterBrowserElderly('${item.elderlyId}')">
         <div class="icon">👴</div>
         <div class="info">
-          <div class="name">${item.elderlyName}${modeBadge}</div>
+          <div class="name">${item.elderlyName}</div>
           <div class="sub">${item.count} ครั้งที่บันทึก</div>
         </div>
         <div class="count-badge">${item.count}</div>
@@ -1448,11 +1532,9 @@ function renderBrowserVisitsLevel(div, monthVisits) {
   const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
   const cg = allCGs.find(c => c.code === browserState.cgCode);
   const elderly = allElderly.find(e => e.id === browserState.elderlyId);
-
   const visits = monthVisits
     .filter(v => v.cgCode === browserState.cgCode && v.elderlyId === browserState.elderlyId)
     .sort((a, b) => new Date(a.visitDate) - new Date(b.visitDate));
-
   let html = `<div class="breadcrumb">
     <span class="crumb" onclick="exitBrowser()">📁 ${monthName} ${buddhistYear}</span>
     <span class="sep">›</span>
@@ -1460,11 +1542,10 @@ function renderBrowserVisitsLevel(div, monthVisits) {
     <span class="sep">›</span>
     <span style="font-weight:500;">${elderly ? elderly.name : '-'}</span>
   </div>`;
-
   if (visits.length === 0) {
     html += '<div class="empty">ไม่มีข้อมูล</div>';
   } else {
-    html += `<div style="margin-bottom:10px;font-size:13px;color:#666;">รวม ${visits.length} รายการ — เรียงตามวันที่</div>`;
+    html += `<div style="margin-bottom:10px;font-size:13px;color:#666;">รวม ${visits.length} รายการ</div>`;
     visits.forEach(v => {
       const dateStr = formatThaiDateShort(v.visitDate);
       html += `<div class="visit-photo-card">
@@ -1484,23 +1565,12 @@ function renderBrowserVisitsLevel(div, monthVisits) {
   div.innerHTML = html;
 }
 
-function enterBrowserCG(cgCode) {
-  browserState = { level: 'elderly', cgCode: cgCode, elderlyId: null };
-  renderBrowser();
-}
-
-function enterBrowserElderly(elderlyId) {
-  browserState = { level: 'visits', cgCode: browserState.cgCode, elderlyId: elderlyId };
-  renderBrowser();
-}
-
-function exitBrowser() {
-  browserState = { level: 'cg', cgCode: null, elderlyId: null };
-  renderBrowser();
-}
+function enterBrowserCG(cgCode) { browserState = { level: 'elderly', cgCode: cgCode, elderlyId: null }; renderBrowser(); }
+function enterBrowserElderly(elderlyId) { browserState = { level: 'visits', cgCode: browserState.cgCode, elderlyId: elderlyId }; renderBrowser(); }
+function exitBrowser() { browserState = { level: 'cg', cgCode: null, elderlyId: null }; renderBrowser(); }
 
 // ============================================
-// EDIT VISIT
+// EDIT/DELETE VISIT
 // ============================================
 let editVisitNewPhoto = null;
 
@@ -1519,43 +1589,39 @@ function openEditVisit(visitId) {
   document.getElementById('editVisitModal').classList.add('show');
 }
 
-document.addEventListener('change', function(e) {
-  if (e.target.id === 'editVisitPhoto') {
-    const file = e.target.files[0];
-    if (!file) { editVisitNewPhoto = null; return; }
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const maxSize = 1200;
-        let w = img.width, h = img.height;
-        if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
-        else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        editVisitNewPhoto = { base64: dataUrl.split(',')[1] };
-        document.getElementById('editVisitPreview').innerHTML = `
-          <img src="${dataUrl}" style="max-width:200px;max-height:200px;border-radius:8px;border:2px solid #1D9E75;">
-          <div style="font-size:12px;color:#1D9E75;margin-top:4px;font-weight:500;">✓ รูปใหม่ (จะแทนที่รูปเดิม)</div>
-        `;
-      };
-      img.src = ev.target.result;
+function handleEditPhotoChange(e) {
+  const file = e.target.files[0];
+  if (!file) { editVisitNewPhoto = null; return; }
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxSize = 1200;
+      let w = img.width, h = img.height;
+      if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+      else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      editVisitNewPhoto = { base64: dataUrl.split(',')[1] };
+      document.getElementById('editVisitPreview').innerHTML = `
+        <img src="${dataUrl}" style="max-width:200px;max-height:200px;border-radius:8px;border:2px solid #1D9E75;">
+        <div style="font-size:12px;color:#1D9E75;margin-top:4px;font-weight:500;">✓ รูปใหม่</div>
+      `;
     };
-    reader.readAsDataURL(file);
-  }
-});
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
 async function saveEditVisit() {
   const visitId = document.getElementById('editVisitId').value;
   const v = allVisits.find(x => x.id === visitId);
   if (!v) return;
-
   const newDate = document.getElementById('editVisitDate').value;
   const newNote = document.getElementById('editVisitNote').value;
-
   if (!newDate) { alert('กรุณาใส่วันที่'); return; }
 
   const btn = document.getElementById('editVisitSaveBtn');
@@ -1564,15 +1630,12 @@ async function saveEditVisit() {
 
   try {
     const updates = { visitDate: newDate, note: newNote };
-
-    // ถ้ามีรูปใหม่ ให้อัปโหลด
     if (editVisitNewPhoto) {
-      btn.textContent = 'กำลังอัปโหลดรูป...';
+      btn.textContent = 'กำลังอัปโหลด...';
       const newUrl = await uploadToImgBB(editVisitNewPhoto.base64);
       updates.photoUrl = newUrl;
     }
-
-    await firebaseDB.ref('visits/' + visitId).update(updates);
+    await firebaseDB.ref(getDBPrefix() + '/visits/' + visitId).update(updates);
     showToast('✓ แก้ไขสำเร็จ');
     closeModal('editVisitModal');
   } catch (e) {
@@ -1589,35 +1652,20 @@ function confirmDeleteVisit(visitId) {
   const dateStr = formatThaiDateShort(v.visitDate);
   showConfirm('🗑', 'ลบรายการเยี่ยมนี้?', `${v.elderlyName} วันที่ ${dateStr}\nรูปและข้อมูลจะหายถาวร`, async function() {
     try {
-      await firebaseDB.ref('visits/' + visitId).remove();
+      await firebaseDB.ref(getDBPrefix() + '/visits/' + visitId).remove();
       showToast('ลบสำเร็จ');
-    } catch (e) {
-      alert('เกิดข้อผิดพลาด: ' + e.message);
-    }
+    } catch (e) { alert('เกิดข้อผิดพลาด: ' + e.message); }
   });
 }
 
-function formatThaiDateTime(isoStr) {
-  if (!isoStr) return '-';
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return '-';
-  const day = d.getDate();
-  const month = THAI_MONTHS_SHORT[d.getMonth() + 1];
-  const year = (d.getFullYear() + 543).toString().slice(-2);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${day} ${month} ${year} ${hh}:${mm}`;
-}
-
 // ============================================
-// PDF GENERATION
+// PDF GENERATION (with adaptive grid)
 // ============================================
 async function generatePDF() {
   const month = parseInt(document.getElementById('rptMonth').value);
   const year = parseInt(document.getElementById('rptYear').value);
   const cgFilter = document.getElementById('rptCG').value;
 
-  // กรอง visits
   let visits = allVisits.filter(v => {
     if (!v.visitDate) return false;
     const d = new Date(v.visitDate);
@@ -1630,7 +1678,6 @@ async function generatePDF() {
     return;
   }
 
-  // Group by elderly
   const grouped = {};
   visits.forEach(v => {
     if (!grouped[v.elderlyId]) {
@@ -1646,41 +1693,36 @@ async function generatePDF() {
     }
     grouped[v.elderlyId].photos.push({ url: v.photoUrl, date: v.visitDate });
   });
-
-  // Sort photos by date
   Object.values(grouped).forEach(g => g.photos.sort((a, b) => new Date(a.date) - new Date(b.date)));
 
   const btn = document.getElementById('rptBtn');
   btn.disabled = true;
-  document.getElementById('reportAlert').innerHTML = '<div class="alert alert-warning">⏳ กำลังสร้าง PDF กรุณารอ...</div>';
+  document.getElementById('reportAlert').innerHTML = '<div class="alert alert-warning">⏳ กำลังสร้าง PDF...</div>';
   document.getElementById('rptResult').innerHTML = '';
 
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-    const pageWidth = 210, pageHeight = 297;
-
     const monthName = THAI_MONTHS[month];
     const buddhistYear = year + 543;
-
     let pageIdx = 0;
     const groupArr = Object.values(grouped);
 
     for (let gi = 0; gi < groupArr.length; gi++) {
       const item = groupArr[gi];
-      btn.innerHTML = `⏳ กำลังสร้างหน้า ${gi + 1}/${groupArr.length}`;
+      btn.innerHTML = `⏳ หน้า ${gi + 1}/${groupArr.length}`;
 
       if (item.pdfMode === 'obt') {
-        // โหมด อบต. - 10-12 รูป/หน้า (ขึ้นหน้าใหม่ถ้าเกิน 12)
-        const chunks = chunkArray(item.photos, 12); // ทุกๆ 12 รูป = 1 หน้า
+        const chunks = chunkArray(item.photos, 12);
         for (const chunk of chunks) {
           if (pageIdx > 0) pdf.addPage();
           await renderObtPage(pdf, item, chunk, monthName, buddhistYear);
           pageIdx++;
         }
       } else {
-        // โหมดปกติ - 4 รูป/หน้า
-        const chunks = chunkArray(item.photos, 4);
+        // NORMAL MODE — Adaptive grid (up to 16 photos/page)
+        const MAX_PER_PAGE = 16;
+        const chunks = chunkArray(item.photos, MAX_PER_PAGE);
         for (const chunk of chunks) {
           if (pageIdx > 0) pdf.addPage();
           await renderNormalPage(pdf, item, chunk, monthName, buddhistYear);
@@ -1689,11 +1731,12 @@ async function generatePDF() {
       }
     }
 
-    const filename = `สรุปการเยี่ยม_${monthName}${buddhistYear}${cgFilter ? '_' + (allCGs.find(c => c.code === cgFilter) || {}).name : ''}.pdf`;
+    const cfg = HOSPITALS[currentHospital];
+    const hospitalTag = cfg.id === 'thapthimsiam' ? 'ทับทิมสยาม07' : 'สำโรงเกียรติ';
+    const filename = `สรุปการเยี่ยม_${hospitalTag}_${monthName}${buddhistYear}${cgFilter ? '_' + (allCGs.find(c => c.code === cgFilter) || {}).name : ''}.pdf`;
     pdf.save(filename);
-
     document.getElementById('reportAlert').innerHTML = '';
-    document.getElementById('rptResult').innerHTML = `<div class="alert alert-success">✓ สร้าง PDF สำเร็จ — ${groupArr.length} คน, ${pageIdx} หน้า<br>ไฟล์: <strong>${filename}</strong></div>`;
+    document.getElementById('rptResult').innerHTML = `<div class="alert alert-success">✓ สำเร็จ — ${groupArr.length} คน, ${pageIdx} หน้า</div>`;
     showToast('✓ ดาวน์โหลด PDF สำเร็จ');
   } catch (e) {
     document.getElementById('reportAlert').innerHTML = '<div class="alert alert-error">เกิดข้อผิดพลาด: ' + e.message + '</div>';
@@ -1703,27 +1746,41 @@ async function generatePDF() {
   }
 }
 
+// Adaptive grid for normal mode - fit page based on photo count
+function getGridConfig(n) {
+  // Returns { cols, rows, fontSize }
+  if (n <= 4) return { cols: 2, rows: 2, fontSize: 16 };
+  if (n <= 6) return { cols: 3, rows: 2, fontSize: 15 };
+  if (n <= 9) return { cols: 3, rows: 3, fontSize: 14 };
+  if (n <= 12) return { cols: 4, rows: 3, fontSize: 13 };
+  return { cols: 4, rows: 4, fontSize: 12 }; // 13-16
+}
+
 async function renderNormalPage(pdf, item, photos, monthName, buddhistYear) {
-  // Build HTML
+  const cfg = HOSPITALS[currentHospital];
+  const grid = getGridConfig(photos.length);
+  const gap = photos.length <= 4 ? 20 : (photos.length <= 9 ? 14 : 10);
+  const pad = photos.length <= 4 ? 50 : 40;
+
   const html = `
-    <div style="width:794px;padding:60px 60px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;">
-      <div style="text-align:center;margin-bottom:30px;">
-        <div style="font-size:22px;font-weight:600;margin-bottom:6px;">ภาพกิจกรรมเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
-        <div style="font-size:20px;margin-bottom:6px;">ประจำเดือน ${monthName} ${buddhistYear}</div>
-        <div style="font-size:20px;">${item.elderlyName}</div>
+    <div style="width:794px;padding:${pad}px ${pad}px 30px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;min-height:1123px;">
+      <div style="text-align:center;margin-bottom:${photos.length <= 4 ? 30 : 20}px;">
+        <div style="font-size:${photos.length <= 4 ? 22 : 20}px;font-weight:600;margin-bottom:6px;">ภาพกิจกรรมเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+        <div style="font-size:${photos.length <= 4 ? 20 : 18}px;margin-bottom:6px;">ประจำเดือน ${monthName} ${buddhistYear}</div>
+        <div style="font-size:${photos.length <= 4 ? 20 : 18}px;">${item.elderlyName}${item.elderlyAge ? ' อายุ ' + item.elderlyAge + ' ปี' : ''}</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px 40px;">
+      <div style="display:grid;grid-template-columns:repeat(${grid.cols},1fr);gap:${gap}px;">
         ${photos.map(p => `
           <div style="text-align:center;">
             <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
               <img src="${p.url}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
             </div>
-            <div style="font-size:18px;margin-top:10px;">${formatThaiDateShort(p.date)}</div>
+            <div style="font-size:${grid.fontSize}px;margin-top:6px;">${formatThaiDateShort(p.date)}</div>
           </div>
         `).join('')}
       </div>
-      <div style="position:absolute;bottom:30px;left:60px;right:60px;font-size:12px;color:#888;text-align:center;">
-        CG: ${item.cgName} | รพ.สต.ทับทิมสยาม 07
+      <div style="margin-top:20px;font-size:11px;color:#888;text-align:center;">
+        CG: ${item.cgName} | ${cfg.name}
       </div>
     </div>
   `;
@@ -1731,26 +1788,12 @@ async function renderNormalPage(pdf, item, photos, monthName, buddhistYear) {
 }
 
 async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
-  // วันที่เป็น "1,4,6,8,..."
+  const cfg = HOSPITALS[currentHospital];
   const dateStr = photos.map(p => new Date(p.date).getDate()).join(',');
-
-  // ปรับ grid อัตโนมัติตามจำนวนรูป
-  // 1-5 รูป → 5 คอลัมน์ 1 แถว
-  // 6-10 รูป → 5 คอลัมน์ 2 แถว
-  // 11-12 รูป → 4 คอลัมน์ 3 แถว
-  let cols, fontSize;
   const n = photos.length;
-  if (n <= 5) {
-    cols = 5;
-    fontSize = 13;
-  } else if (n <= 10) {
-    cols = 5;
-    fontSize = 13;
-  } else {
-    // 11-12 รูป
-    cols = 4;
-    fontSize = 13;
-  }
+  let cols;
+  if (n <= 10) cols = 5;
+  else cols = 4; // 11-12
 
   const html = `
     <div style="width:794px;padding:50px 50px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;">
@@ -1760,17 +1803,17 @@ async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
         <div style="font-size:17px;">ชื่อ ${item.elderlyName} อายุ ${item.elderlyAge || '-'} ปี วันที่ ${dateStr} ${monthName} ${buddhistYear}</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:10px;">
-        ${photos.map((p, i) => `
+        ${photos.map(p => `
           <div style="text-align:center;">
             <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
               <img src="${p.url}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
             </div>
-            <div style="font-size:${fontSize}px;margin-top:4px;">${new Date(p.date).getDate()} ${THAI_MONTHS_SHORT[new Date(p.date).getMonth()+1]}</div>
+            <div style="font-size:13px;margin-top:4px;">${new Date(p.date).getDate()} ${THAI_MONTHS_SHORT[new Date(p.date).getMonth()+1]}</div>
           </div>
         `).join('')}
       </div>
       <div style="margin-top:14px;font-size:12px;color:#888;text-align:center;">
-        CG: ${item.cgName} | รพ.สต.ทับทิมสยาม 07
+        CG: ${item.cgName} | ${cfg.name}
       </div>
     </div>
   `;
@@ -1780,20 +1823,12 @@ async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
 async function renderHtmlToPdfPage(pdf, html) {
   const container = document.getElementById('pdfRender');
   container.innerHTML = html;
-
-  // รอรูปโหลดเสร็จ
   const imgs = container.querySelectorAll('img');
   await Promise.all(Array.from(imgs).map(img => {
     if (img.complete) return Promise.resolve();
-    return new Promise(resolve => {
-      img.onload = resolve;
-      img.onerror = resolve;
-    });
+    return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
   }));
-
-  // รอเพิ่มเล็กน้อยให้ render เสร็จ
   await new Promise(r => setTimeout(r, 300));
-
   const canvas = await html2canvas(container.firstElementChild, {
     scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false
   });
@@ -1815,12 +1850,19 @@ function formatThaiDateShort(dateStr) {
   return `${day} ${month} ${year}`;
 }
 
-// ============================================
-// HELPERS
-// ============================================
-function closeModal(id) {
-  document.getElementById(id).classList.remove('show');
+function formatThaiDateTime(isoStr) {
+  if (!isoStr) return '-';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '-';
+  const day = d.getDate();
+  const month = THAI_MONTHS_SHORT[d.getMonth() + 1];
+  const year = (d.getFullYear() + 543).toString().slice(-2);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year} ${hh}:${mm}`;
 }
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
 function showToast(msg) {
   const t = document.createElement('div');
@@ -1844,7 +1886,6 @@ function closeConfirm(yes) {
   confirmCallback = null;
 }
 
-// Close modal on backdrop click
 document.querySelectorAll('.modal').forEach(modal => {
   modal.addEventListener('click', function(e) {
     if (e.target === modal) modal.classList.remove('show');

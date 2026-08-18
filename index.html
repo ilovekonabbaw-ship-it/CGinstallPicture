@@ -514,6 +514,30 @@ table tr:hover td { background: #FAFBFD; }
   </div>
 </div>
 
+<div class="modal" id="addSingleVisitModal">
+  <div class="modal-content" style="max-width:480px;">
+    <h3>➕ เพิ่มการเยี่ยม (ทีละ 1 รูป)</h3>
+    <div id="addSingleInfo" class="alert alert-info" style="font-size:13px;"></div>
+    <div class="field">
+      <label>วันที่เยี่ยม *</label>
+      <input type="date" id="addSingleDate">
+    </div>
+    <div class="field">
+      <label>หมายเหตุ (ไม่บังคับ)</label>
+      <textarea id="addSingleNote" placeholder="เช่น สังเกตอาการ"></textarea>
+    </div>
+    <div class="field">
+      <label>เลือกรูป *</label>
+      <input type="file" id="addSinglePhoto" accept="image/*">
+      <div id="addSinglePreview" style="text-align:center;margin-top:8px;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('addSingleVisitModal')">ยกเลิก</button>
+      <button class="btn btn-primary" id="addSingleSaveBtn" onclick="saveAddSingleVisit()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="editVisitModal">
   <div class="modal-content" style="max-width:480px;">
     <h3>✏️ แก้ไขรายการเยี่ยม</h3>
@@ -1560,14 +1584,17 @@ function renderBrowserElderlyLevel(div, monthVisits) {
     html += '<div class="empty">ไม่มีข้อมูล</div>';
   } else {
     Object.values(byElderly).forEach(item => {
-      html += `<div class="browser-row" onclick="enterBrowserElderly('${item.elderlyId}')">
-        <div class="icon">👴</div>
-        <div class="info">
-          <div class="name">${item.elderlyName}</div>
-          <div class="sub">${item.count} ครั้งที่บันทึก</div>
+      html += `<div class="browser-row" style="position:relative;">
+        <div style="display:flex;align-items:center;gap:12px;flex:1;cursor:pointer;" onclick="enterBrowserElderly('${item.elderlyId}')">
+          <div class="icon">👴</div>
+          <div class="info">
+            <div class="name">${item.elderlyName}</div>
+            <div class="sub">${item.count} ครั้งที่บันทึก</div>
+          </div>
+          <div class="count-badge">${item.count}</div>
+          <div class="arrow">›</div>
         </div>
-        <div class="count-badge">${item.count}</div>
-        <div class="arrow">›</div>
+        <button class="btn btn-danger btn-sm" style="margin-left:8px;" onclick="event.stopPropagation();confirmDeleteAllForElderly('${item.elderlyId}')">🗑 ลบทั้งหมด</button>
       </div>`;
     });
   }
@@ -1588,6 +1615,9 @@ function renderBrowserVisitsLevel(div, monthVisits) {
     <span class="crumb" onclick="enterBrowserCG('${browserState.cgCode}')">${cg ? cg.name : '-'}</span>
     <span class="sep">›</span>
     <span style="font-weight:500;">${elderly ? elderly.name : '-'}</span>
+  </div>
+  <div style="margin-bottom:12px;">
+    <button class="btn btn-primary btn-sm" onclick="openAddSingleVisit()">➕ เพิ่มการเยี่ยม (ทีละ 1 รูป)</button>
   </div>`;
   if (visits.length === 0) {
     html += '<div class="empty">ไม่มีข้อมูล</div>';
@@ -1703,6 +1733,117 @@ function confirmDeleteVisit(visitId) {
       showToast('ลบสำเร็จ');
     } catch (e) { alert('เกิดข้อผิดพลาด: ' + e.message); }
   });
+}
+
+// ลบรายการเยี่ยมทั้งหมดของผู้สูงอายุคนหนึ่งในเดือนที่เลือก
+function confirmDeleteAllForElderly(elderlyId) {
+  const month = parseInt(document.getElementById('dashMonth').value);
+  const year = parseInt(document.getElementById('dashYear').value);
+  const monthName = THAI_MONTHS[month];
+  const buddhistYear = year + 543;
+  const el = allElderly.find(e => e.id === elderlyId);
+  if (!el) return;
+  const visitsToDelete = allVisits.filter(v => {
+    if (v.elderlyId !== elderlyId) return false;
+    const d = new Date(v.visitDate);
+    return d.getFullYear() === year && (d.getMonth() + 1) === month;
+  });
+  if (visitsToDelete.length === 0) { showToast('ไม่มีรายการให้ลบ'); return; }
+  showConfirm('🗑', `ลบทั้งหมด ${visitsToDelete.length} รายการ?`, `${el.name}\nเดือน ${monthName} ${buddhistYear}\nรูปทั้งหมดจะหายถาวร`, async function() {
+    try {
+      for (const v of visitsToDelete) {
+        await firebaseDB.ref('visits/' + v.id).remove();
+      }
+      showToast(`ลบสำเร็จ ${visitsToDelete.length} รายการ`);
+    } catch (e) { alert('เกิดข้อผิดพลาด: ' + e.message); }
+  });
+}
+
+// เพิ่มการเยี่ยมทีละ 1 รูป
+let addSinglePhotoData = null;
+
+function openAddSingleVisit() {
+  const el = allElderly.find(e => e.id === browserState.elderlyId);
+  const cg = allCGs.find(c => c.code === browserState.cgCode);
+  if (!el || !cg) return;
+  const month = parseInt(document.getElementById('dashMonth').value);
+  const year = parseInt(document.getElementById('dashYear').value);
+
+  document.getElementById('addSingleInfo').innerHTML = `<strong>${el.name}</strong> | CG: ${cg.name}<br>เดือน ${THAI_MONTHS[month]} ${year + 543}`;
+  // Set default date to 1st of the selected month
+  const dateStr = `${year}-${String(month).padStart(2, '0')}-01`;
+  document.getElementById('addSingleDate').value = dateStr;
+  document.getElementById('addSingleDate').min = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  document.getElementById('addSingleDate').max = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  document.getElementById('addSingleNote').value = '';
+  document.getElementById('addSinglePhoto').value = '';
+  document.getElementById('addSinglePreview').innerHTML = '';
+  addSinglePhotoData = null;
+  document.getElementById('addSingleVisitModal').classList.add('show');
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'addSinglePhoto') {
+    const file = e.target.files[0];
+    if (!file) { addSinglePhotoData = null; return; }
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const maxSize = 1200;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+        else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        addSinglePhotoData = { base64: dataUrl.split(',')[1] };
+        document.getElementById('addSinglePreview').innerHTML = `<img src="${dataUrl}" style="max-width:180px;max-height:180px;border-radius:8px;border:2px solid #1D9E75;"><div style="font-size:12px;color:#1D9E75;margin-top:4px;">✓ พร้อมอัปโหลด</div>`;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+async function saveAddSingleVisit() {
+  const el = allElderly.find(e => e.id === browserState.elderlyId);
+  const cg = allCGs.find(c => c.code === browserState.cgCode);
+  if (!el || !cg) return;
+  const date = document.getElementById('addSingleDate').value;
+  const note = document.getElementById('addSingleNote').value;
+  if (!date) { alert('กรุณาเลือกวันที่'); return; }
+  if (!addSinglePhotoData) { alert('กรุณาเลือกรูป'); return; }
+
+  const btn = document.getElementById('addSingleSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังอัปโหลด...';
+  try {
+    const url = await uploadToImgBB(addSinglePhotoData.base64);
+    const visitId = 'V' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    await firebaseDB.ref('visits/' + visitId).set({
+      visitDate: date,
+      recordedAt: new Date().toISOString(),
+      elderlyId: el.id,
+      elderlyName: el.name,
+      cgCode: cg.code,
+      cgName: cg.name,
+      photoUrl: url,
+      note: note,
+      pdfMode: el.pdfMode || 'normal',
+      hospitalId: currentHospital
+    });
+    showToast('✓ เพิ่มการเยี่ยมสำเร็จ');
+    closeModal('addSingleVisitModal');
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'บันทึก';
+  }
 }
 
 // ============================================

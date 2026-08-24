@@ -5,16 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>ระบบบันทึกการเยี่ยมผู้สูงอายุ</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; font-size: 15px; line-height: 1.5; }
-
 /* Hospital selector screen */
 .hospital-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: linear-gradient(135deg, #1D9E75 0%, #185FA5 100%); }
 .hospital-box { background: white; border-radius: 20px; padding: 32px 24px; max-width: 520px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
@@ -27,7 +24,6 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .hospital-card .hinfo .hname { font-weight: 600; font-size: 16px; color: #2C2C2A; margin-bottom: 3px; }
 .hospital-card .hinfo .hsub { font-size: 13px; color: #666; }
 .hospital-card .harrow { font-size: 22px; color: #888; }
-
 /* Main header */
 .header { background: linear-gradient(135deg, #1D9E75 0%, #0F6E56 100%); color: white; padding: 14px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
 .header.blue { background: linear-gradient(135deg, #185FA5 0%, #0C447C 100%); }
@@ -36,19 +32,15 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .header p { font-size: 12px; opacity: 0.9; }
 .header .switch-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: inherit; }
 .header .switch-btn:hover { background: rgba(255,255,255,0.3); }
-
 .container { max-width: 1200px; margin: 0 auto; padding: 14px; }
-
 /* Tabs */
 .tabs { display: flex; gap: 4px; background: white; border-radius: 10px; padding: 4px; margin-bottom: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tab { padding: 10px 16px; border-radius: 7px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
 .tab.active { background: #1D9E75; color: white; }
 .tab:hover:not(.active) { background: #F0F0F0; }
-
 .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .card h2 { font-size: 17px; font-weight: 600; margin-bottom: 12px; color: #2C2C2A; }
 .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #555; }
-
 .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .stat { background: linear-gradient(135deg, #F8F9FB 0%, #EEF1F5 100%); padding: 14px; border-radius: 10px; }
 .stat .label { font-size: 12px; color: #666; margin-bottom: 4px; }
@@ -58,7 +50,6 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .stat.warning .value { color: #BA7517; }
 .stat.info .value { color: #185FA5; }
 .stat.danger .value { color: #D85A30; }
-
 .field { margin-bottom: 12px; }
 .field label { display: block; font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 500; }
 .field input, .field select, .field textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E4EA; border-radius: 8px; font-size: 15px; font-family: inherit; background: white; color: #2C2C2A; }
@@ -68,7 +59,6 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 @media (max-width: 600px) { .row, .row-3 { grid-template-columns: 1fr; } }
-
 .btn { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .btn-primary { background: #1D9E75; color: white; }
 .btn-primary:hover { background: #0F6E56; }
@@ -81,35 +71,29 @@ body { font-family: 'Sarabun', sans-serif; background: #F5F7FA; color: #2C2C2A; 
 .btn-sm { padding: 6px 10px; font-size: 13px; }
 .btn-lg { padding: 14px 20px; font-size: 16px; width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
 table { width: 100%; border-collapse: collapse; }
 table th, table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #F0F0F0; font-size: 14px; }
 table th { background: #F8F9FB; font-weight: 600; color: #555; font-size: 13px; }
 table tr:hover td { background: #FAFBFD; }
 .table-responsive { overflow-x: auto; }
-
 .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 12px; font-weight: 500; }
 .badge-success { background: #EAF3DE; color: #173404; }
 .badge-warning { background: #FAEEDA; color: #412402; }
 .badge-info { background: #E6F1FB; color: #042C53; }
 .badge-purple { background: #E8E3F8; color: #4527A0; }
 .badge-gray { background: #ECECEC; color: #555; }
-
 .progress { background: #F0F0F0; border-radius: 4px; height: 6px; overflow: hidden; margin-top: 4px; }
 .progress-bar { height: 100%; background: linear-gradient(90deg, #1D9E75, #34C896); transition: width 0.4s; }
-
 .alert { padding: 12px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
 .alert-success { background: #EAF3DE; color: #173404; border: 1px solid #D4E5C0; }
 .alert-error { background: #FCEBEB; color: #501313; border: 1px solid #F4C2C2; }
 .alert-warning { background: #FAEEDA; color: #412402; border: 1px solid #F0DCB4; }
 .alert-info { background: #E6F1FB; color: #042C53; border: 1px solid #BFD9F0; }
-
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
 .modal.show { display: flex; }
 .modal-content { background: white; border-radius: 12px; padding: 20px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; }
 .modal-content h3 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-
 .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
 .confirm-overlay.show { display: flex; }
 .confirm-box { background: white; border-radius: 12px; padding: 24px; max-width: 380px; width: 100%; text-align: center; }
@@ -118,41 +102,31 @@ table tr:hover td { background: #FAFBFD; }
 .confirm-sub { font-size: 13px; color: #888; margin-bottom: 20px; white-space: pre-line; }
 .confirm-actions { display: flex; gap: 8px; }
 .confirm-actions .btn { flex: 1; }
-
 .loading { text-align: center; padding: 40px 20px; }
 .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #E0E4EA; border-top-color: #1D9E75; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
 .empty { text-align: center; padding: 40px 20px; color: #888; font-size: 14px; }
 .empty .icon { font-size: 40px; margin-bottom: 8px; opacity: 0.4; }
-
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2C2C2A; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 3000; animation: slideUp 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 @keyframes slideUp { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-
 .photo-area { border: 2px dashed #C7CFD9; border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #FAFBFD; }
 .photo-area:hover { border-color: #1D9E75; background: #F0F9F5; }
 .photo-area input[type="file"] { display: none; }
 .photo-area .icon { font-size: 36px; margin-bottom: 8px; }
 .photo-area .text { font-size: 14px; color: #666; }
 .photo-area .hint { font-size: 12px; color: #999; margin-top: 4px; }
-
 .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
 .photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #f0f0f0; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
 .photo-item img { width: 100%; height: 100%; object-fit: cover; }
 .photo-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(220,53,69,0.95); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; line-height: 1; }
-
 .date-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .date-chip { padding: 6px 10px; background: #F0F9F5; color: #0F6E56; border-radius: 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #C5E5D2; }
 .date-chip .x { cursor: pointer; opacity: 0.6; font-weight: bold; }
 .date-chip .x:hover { opacity: 1; color: #D85A30; }
-
 .hidden { display: none !important; }
-
 .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
 .filter-bar select, .filter-bar input { padding: 8px 10px; font-size: 14px; border: 1px solid #E0E4EA; border-radius: 6px; }
-
 .actions { display: flex; gap: 4px; flex-wrap: wrap; }
-
 .browser-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #E0E4EA; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; background: white; }
 .browser-row:hover { border-color: #1D9E75; background: #F0F9F5; }
 .browser-row .icon { font-size: 22px; }
@@ -161,12 +135,10 @@ table tr:hover td { background: #FAFBFD; }
 .browser-row .info .sub { font-size: 12px; color: #888; margin-top: 2px; }
 .browser-row .arrow { color: #888; font-size: 18px; }
 .browser-row .count-badge { background: #185FA5; color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
-
 .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #888; margin-bottom: 12px; flex-wrap: wrap; }
 .breadcrumb .crumb { cursor: pointer; color: #185FA5; text-decoration: underline; }
 .breadcrumb .crumb:hover { color: #0C447C; }
 .breadcrumb .sep { color: #C7CFD9; }
-
 .visit-photo-card { display: grid; grid-template-columns: 100px 1fr auto; gap: 12px; padding: 10px; border: 1px solid #E0E4EA; border-radius: 8px; margin-bottom: 8px; align-items: center; }
 .visit-photo-card img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; cursor: pointer; }
 .visit-photo-card .vinfo { font-size: 13px; }
@@ -181,7 +153,6 @@ table tr:hover td { background: #FAFBFD; }
 </style>
 </head>
 <body>
-
 <!-- ============================ -->
 <!-- HOSPITAL SELECTOR SCREEN     -->
 <!-- ============================ -->
@@ -189,7 +160,6 @@ table tr:hover td { background: #FAFBFD; }
   <div class="hospital-box">
     <h1>🏥 เลือกโรงพยาบาลส่งเสริมสุขภาพตำบล</h1>
     <p class="subtitle">ระบบบันทึกการเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</p>
-
     <div class="hospital-card" onclick="selectHospital('thapthimsiam')">
       <div class="hicon">🏥</div>
       <div class="hinfo">
@@ -198,7 +168,6 @@ table tr:hover td { background: #FAFBFD; }
       </div>
       <div class="harrow">›</div>
     </div>
-
     <div class="hospital-card" onclick="selectHospital('samrongkiat')">
       <div class="hicon">🏥</div>
       <div class="hinfo">
@@ -207,18 +176,15 @@ table tr:hover td { background: #FAFBFD; }
       </div>
       <div class="harrow">›</div>
     </div>
-
     <div style="text-align:center;margin-top:20px;font-size:12px;color:#999;">
       💾 ข้อมูลแต่ละ รพ.สต. แยกจากกันโดยสิ้นเชิง
     </div>
   </div>
 </div>
-
 <!-- ============================ -->
 <!-- MAIN APP                     -->
 <!-- ============================ -->
 <div id="mainApp" class="hidden">
-
   <div class="header" id="mainHeader">
     <div class="hinfo">
       <h1 id="headerTitle">📋 ระบบบันทึกการเยี่ยมผู้สูงอายุ</h1>
@@ -226,16 +192,15 @@ table tr:hover td { background: #FAFBFD; }
     </div>
     <button class="switch-btn" onclick="backToHospitalSelector()">🔄 เปลี่ยน รพ.สต.</button>
   </div>
-
   <div class="container">
     <div class="tabs">
       <div class="tab active" data-tab="dashboard">📊 ภาพรวม</div>
       <div class="tab" data-tab="record">📷 บันทึกการเยี่ยม</div>
+      <div class="tab" data-tab="browser">📁 ดูข้อมูลที่บันทึก</div>
       <div class="tab" data-tab="cg">👥 จัดการ CG</div>
       <div class="tab" data-tab="elderly">👴 จัดการผู้สูงอายุ</div>
       <div class="tab" data-tab="report">📄 สร้าง PDF</div>
     </div>
-
     <!-- DASHBOARD -->
     <div id="tab-dashboard" class="tab-content">
       <div class="filter-bar">
@@ -244,37 +209,24 @@ table tr:hover td { background: #FAFBFD; }
         <select id="dashYear"></select>
         <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">🔄 รีเฟรช</button>
       </div>
-
       <div class="card">
         <h2>📈 ภาพรวมรายเดือน</h2>
         <div id="dashStats"><div class="loading"><div class="spinner"></div></div></div>
       </div>
-
       <div class="card">
         <h2>📊 สถิติรวมทั้งหมด</h2>
         <div id="dashTotal"></div>
       </div>
-
       <div class="card">
         <h2>👥 สถานะการเยี่ยมของ CG รายเดือน</h2>
         <div id="dashCgList"></div>
       </div>
-
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <h2>📂 ดูข้อมูลที่บันทึก</h2>
-          <div style="font-size:13px;color:#888;">คลิกเพื่อดูรายละเอียด</div>
-        </div>
-        <div id="dashBrowser"></div>
-      </div>
     </div>
-
     <!-- RECORD -->
     <div id="tab-record" class="tab-content hidden">
       <div class="card">
         <h2>📷 บันทึกการเยี่ยมผู้สูงอายุ</h2>
         <div id="recordAlert"></div>
-
         <div class="row">
           <div class="field">
             <label>1. เลือก CG *</label>
@@ -289,9 +241,7 @@ table tr:hover td { background: #FAFBFD; }
             </select>
           </div>
         </div>
-
         <div id="recElderlyInfo" class="alert alert-info hidden"></div>
-
         <div class="row">
           <div class="field">
             <label>3. เดือน/ปี</label>
@@ -306,13 +256,11 @@ table tr:hover td { background: #FAFBFD; }
             <div class="hint">อัปกี่รูปก็ได้ ระบบจัดหน้าให้พอดี A4 อัตโนมัติ</div>
           </div>
         </div>
-
         <div class="field">
           <label>5. เลือกวันที่เยี่ยม</label>
           <button class="btn btn-secondary btn-sm" onclick="openDatePicker()">📅 เลือกวันที่</button>
           <div id="selectedDates" class="date-chips"></div>
         </div>
-
         <div class="field">
           <label>6. อัปโหลดรูป *</label>
           <label class="photo-area" for="recPhotoInput">
@@ -323,16 +271,23 @@ table tr:hover td { background: #FAFBFD; }
           <input type="file" id="recPhotoInput" accept="image/*" multiple>
           <div id="recPhotoList" class="photo-grid"></div>
         </div>
-
         <div class="field">
           <label>7. หมายเหตุ (ไม่บังคับ)</label>
           <textarea id="recNote" placeholder="เช่น สังเกตอาการ"></textarea>
         </div>
-
         <button class="btn btn-primary btn-lg" id="recSubmitBtn" onclick="submitRecord()">💾 บันทึกข้อมูล</button>
       </div>
     </div>
-
+    <!-- BROWSER -->
+    <div id="tab-browser" class="tab-content hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <h2>📁 ดูข้อมูลที่บันทึก</h2>
+          <div style="font-size:13px;color:#888;">คลิกเพื่อดูรายละเอียด</div>
+        </div>
+        <div id="dashBrowser"></div>
+      </div>
+    </div>
     <!-- CG -->
     <div id="tab-cg" class="tab-content hidden">
       <div class="card">
@@ -343,7 +298,6 @@ table tr:hover td { background: #FAFBFD; }
         <div id="cgTable" class="table-responsive"></div>
       </div>
     </div>
-
     <!-- ELDERLY -->
     <div id="tab-elderly" class="tab-content hidden">
       <div class="card">
@@ -366,7 +320,6 @@ table tr:hover td { background: #FAFBFD; }
         <div id="elderlyTable" class="table-responsive"></div>
       </div>
     </div>
-
     <!-- REPORT -->
     <div id="tab-report" class="tab-content hidden">
       <div class="card">
@@ -392,10 +345,8 @@ table tr:hover td { background: #FAFBFD; }
         <div id="rptResult" style="margin-top:14px;"></div>
       </div>
     </div>
-
   </div>
 </div>
-
 <!-- Modals -->
 <div class="modal" id="cgModal">
   <div class="modal-content">
@@ -427,7 +378,6 @@ table tr:hover td { background: #FAFBFD; }
     </div>
   </div>
 </div>
-
 <div class="modal" id="elderlyModal">
   <div class="modal-content">
     <h3 id="elderlyModalTitle">เพิ่มผู้สูงอายุ</h3>
@@ -499,7 +449,6 @@ table tr:hover td { background: #FAFBFD; }
     </div>
   </div>
 </div>
-
 <div class="modal" id="dateModal">
   <div class="modal-content" style="max-width:380px;">
     <h3>📅 เลือกวันที่เยี่ยม</h3>
@@ -513,7 +462,6 @@ table tr:hover td { background: #FAFBFD; }
     </div>
   </div>
 </div>
-
 <div class="modal" id="addSingleVisitModal">
   <div class="modal-content" style="max-width:480px;">
     <h3>➕ เพิ่มการเยี่ยม (ทีละ 1 รูป)</h3>
@@ -537,7 +485,6 @@ table tr:hover td { background: #FAFBFD; }
     </div>
   </div>
 </div>
-
 <div class="modal" id="editVisitModal">
   <div class="modal-content" style="max-width:480px;">
     <h3>✏️ แก้ไขรายการเยี่ยม</h3>
@@ -562,7 +509,6 @@ table tr:hover td { background: #FAFBFD; }
     </div>
   </div>
 </div>
-
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-icon" id="confirmIcon">⚠️</div>
@@ -574,9 +520,7 @@ table tr:hover td { background: #FAFBFD; }
     </div>
   </div>
 </div>
-
 <div id="pdfRender" style="position:fixed;left:-99999px;top:0;width:794px;background:white;"></div>
-
 <script>
 // ============================================
 // CONFIG (hardcoded)
@@ -591,10 +535,8 @@ const FIREBASE_CONFIG = {
   appId: "1:835216376361:web:b77aa5b7aa963dc8b7d238"
 };
 const IMGBB_API_KEY = "de40504c4b0201768b948f31525fad66";
-
 const THAI_MONTHS = ['', 'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const THAI_MONTHS_SHORT = ['', 'ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-
 // ============================================
 // HOSPITAL CONFIGS
 // ============================================
@@ -738,7 +680,6 @@ const HOSPITALS = {
     ]
   }
 };
-
 // ============================================
 // STATE
 // ============================================
@@ -755,53 +696,42 @@ let confirmCallback = null;
 let visitsListener = null;
 let cgsListener = null;
 let elderlyListener = null;
-
 // ============================================
 // BOOT
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
   firebase.initializeApp(FIREBASE_CONFIG);
   firebaseDB = firebase.database();
-
   const saved = sessionStorage.getItem('selectedHospital');
   if (saved && HOSPITALS[saved]) {
     selectHospital(saved);
   }
 });
-
 // ============================================
 // HOSPITAL SELECTION
 // ============================================
 async function selectHospital(id) {
   const cfg = HOSPITALS[id];
   if (!cfg) return;
-
   currentHospital = id;
   sessionStorage.setItem('selectedHospital', id);
-
   document.getElementById('hospitalScreen').classList.add('hidden');
   document.getElementById('mainApp').classList.remove('hidden');
-
   const header = document.getElementById('mainHeader');
   if (cfg.color === 'blue') header.classList.add('blue'); else header.classList.remove('blue');
   document.getElementById('headerTitle').textContent = '📋 ' + cfg.name;
   document.getElementById('headerSubtitle').textContent = cfg.fullName;
-
   // Setup moo options
   updateMooOptions(cfg.mooOptions);
-
   // Show/hide obt mode filter
   document.getElementById('filterModeLabel').style.display = cfg.hasObtMode ? '' : 'none';
   document.getElementById('filterMode').style.display = cfg.hasObtMode ? '' : 'none';
   document.getElementById('elPdfModeField').style.display = cfg.hasObtMode ? '' : 'none';
-
   // Seed if empty
   await seedDataIfEmpty(cfg);
-
   // Init app
   initApp();
 }
-
 function updateMooOptions(options) {
   const html = '<option value="">--</option>' + options.map(m => `<option value="${m}">หมู่ ${m}</option>`).join('');
   ['cgMoo', 'elMoo'].forEach(id => {
@@ -809,23 +739,19 @@ function updateMooOptions(options) {
     if (el) el.innerHTML = html;
   });
 }
-
 function backToHospitalSelector() {
   // Detach listeners
   if (cgsListener) firebaseDB.ref('cgs').off('value', cgsListener);
   if (elderlyListener) firebaseDB.ref('elderly').off('value', elderlyListener);
   if (visitsListener) firebaseDB.ref('visits').off('value', visitsListener);
-
   currentHospital = null;
   sessionStorage.removeItem('selectedHospital');
   allCGs = [];
   allElderly = [];
   allVisits = [];
-
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('hospitalScreen').classList.remove('hidden');
 }
-
 async function seedDataIfEmpty(cfg) {
   try {
     // เช็คว่ามีข้อมูลของ hospital นี้แล้วหรือยัง
@@ -836,7 +762,6 @@ async function seedDataIfEmpty(cfg) {
       return h === cfg.id;
     });
     if (existingForHospital.length > 0) return;
-
     const now = new Date().toISOString();
     for (const cg of cfg.seedCGs) {
       const { code, ...rest } = cg;
@@ -865,17 +790,14 @@ async function seedDataIfEmpty(cfg) {
     console.error('Seed failed:', e);
   }
 }
-
 function getDBPrefix() {
   return '';  // ใช้ root path เดิม /cgs, /elderly, /visits ทั้งหมด — filter ด้วย hospitalId ในโค้ด
 }
-
 function initApp() {
   setupTabs();
   initMonthYearSelectors();
   loadAllData();
 }
-
 function setupTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
     tab.onclick = function() {
@@ -887,30 +809,23 @@ function setupTabs() {
     };
   });
 }
-
 function initMonthYearSelectors() {
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYearAD = now.getFullYear();
-
   const monthHTML = THAI_MONTHS.slice(1).map((m, i) =>
     `<option value="${i+1}" ${i+1 === currentMonth ? 'selected' : ''}>${m}</option>`
   ).join('');
-
   let yearHTML = '';
   for (let y = currentYearAD - 2; y <= currentYearAD + 1; y++) {
     yearHTML += `<option value="${y}" ${y === currentYearAD ? 'selected' : ''}>${y + 543}</option>`;
   }
-
   ['dashMonth', 'recMonth', 'rptMonth'].forEach(id => document.getElementById(id).innerHTML = monthHTML);
   ['dashYear', 'recYear', 'rptYear'].forEach(id => document.getElementById(id).innerHTML = yearHTML);
-
   ['dashMonth', 'dashYear'].forEach(id => document.getElementById(id).onchange = loadDashboard);
 }
-
 function loadAllData() {
   const hospitalId = currentHospital;
-
   cgsListener = firebaseDB.ref('cgs').on('value', snap => {
     const data = snap.val() || {};
     // Filter: เก่าไม่มี hospitalId → สำหรับทับทิมสยาม (compat กับข้อมูลเก่า)
@@ -924,7 +839,6 @@ function loadAllData() {
     updateCGSelectors();
     loadDashboard();
   });
-
   elderlyListener = firebaseDB.ref('elderly').on('value', snap => {
     const data = snap.val() || {};
     allElderly = Object.keys(data)
@@ -936,7 +850,6 @@ function loadAllData() {
     renderElderlyTable();
     loadDashboard();
   });
-
   visitsListener = firebaseDB.ref('visits').on('value', snap => {
     const data = snap.val() || {};
     allVisits = Object.keys(data)
@@ -948,7 +861,6 @@ function loadAllData() {
     loadDashboard();
   });
 }
-
 // ============================================
 // CG MANAGEMENT
 // ============================================
@@ -959,7 +871,6 @@ function openCGModal() {
   document.getElementById('cgMoo').value = '';
   document.getElementById('cgModal').classList.add('show');
 }
-
 function editCG(code) {
   const cg = allCGs.find(c => c.code === code);
   if (!cg) return;
@@ -971,7 +882,6 @@ function editCG(code) {
   document.getElementById('cgMoo').value = cg.moo || '';
   document.getElementById('cgModal').classList.add('show');
 }
-
 async function saveCG() {
   const data = {
     name: document.getElementById('cgName').value.trim(),
@@ -982,11 +892,9 @@ async function saveCG() {
     status: 'active'
   };
   if (!data.name) { alert('กรุณาใส่ชื่อ'); return; }
-
   const editCode = document.getElementById('cgEditCode').value;
   const btn = document.getElementById('cgSaveBtn');
   btn.disabled = true;
-
   try {
     if (editCode) {
       await firebaseDB.ref('cgs/' + editCode).update(data);
@@ -1004,7 +912,6 @@ async function saveCG() {
     btn.disabled = false;
   }
 }
-
 async function generateCGCode() {
   const prefix = currentHospital === 'samrongkiat' ? 'SR' : 'CG';
   const maxNum = allCGs.reduce((max, cg) => {
@@ -1013,7 +920,6 @@ async function generateCGCode() {
   }, 0);
   return prefix + String(maxNum + 1).padStart(3, '0');
 }
-
 function confirmDeleteCG(code) {
   const cg = allCGs.find(c => c.code === code);
   if (!cg) return;
@@ -1031,7 +937,6 @@ function confirmDeleteCG(code) {
     }
   });
 }
-
 function renderCGTable() {
   const div = document.getElementById('cgTable');
   if (!div) return;
@@ -1057,7 +962,6 @@ function renderCGTable() {
   html += '</tbody></table>';
   div.innerHTML = html;
 }
-
 function updateCGSelectors() {
   const optHtml = '<option value="">-- เลือก CG --</option>' +
     allCGs.map(cg => `<option value="${cg.code}">${cg.name}</option>`).join('');
@@ -1071,7 +975,6 @@ function updateCGSelectors() {
       allCGs.map(cg => `<option value="${cg.code}">${cg.name}</option>`).join('');
   });
 }
-
 // ============================================
 // ELDERLY MANAGEMENT
 // ============================================
@@ -1083,7 +986,6 @@ function openElderlyModal() {
   document.getElementById('elPdfMode').value = 'normal';
   document.getElementById('elderlyModal').classList.add('show');
 }
-
 function editElderly(id) {
   const e = allElderly.find(x => x.id === id);
   if (!e) return;
@@ -1100,7 +1002,6 @@ function editElderly(id) {
   document.getElementById('elPdfMode').value = e.pdfMode || 'normal';
   document.getElementById('elderlyModal').classList.add('show');
 }
-
 async function saveElderly() {
   const cfg = HOSPITALS[currentHospital];
   const data = {
@@ -1119,11 +1020,9 @@ async function saveElderly() {
   if (!data.name) { alert('กรุณาใส่ชื่อ'); return; }
   if (!data.cgCode) { alert('กรุณาเลือก CG ผู้ดูแล'); return; }
   if (!data.moo) { alert('กรุณาเลือกหมู่ที่'); return; }
-
   const editId = document.getElementById('elEditId').value;
   const btn = document.getElementById('elSaveBtn');
   btn.disabled = true;
-
   try {
     if (editId) {
       await firebaseDB.ref('elderly/' + editId).update(data);
@@ -1141,7 +1040,6 @@ async function saveElderly() {
     btn.disabled = false;
   }
 }
-
 async function generateElderlyId() {
   const prefix = currentHospital === 'samrongkiat' ? 'SE' : 'E';
   const maxNum = allElderly.reduce((max, e) => {
@@ -1150,7 +1048,6 @@ async function generateElderlyId() {
   }, 0);
   return prefix + String(maxNum + 1).padStart(3, '0');
 }
-
 function confirmDeleteElderly(id) {
   const e = allElderly.find(x => x.id === id);
   if (!e) return;
@@ -1167,7 +1064,6 @@ function confirmDeleteElderly(id) {
     }
   });
 }
-
 function renderElderlyTable() {
   const div = document.getElementById('elderlyTable');
   if (!div) return;
@@ -1177,12 +1073,10 @@ function renderElderlyTable() {
   let list = allElderly;
   if (filterCG) list = list.filter(e => e.cgCode === filterCG);
   if (filterMode) list = list.filter(e => (e.pdfMode || 'normal') === filterMode);
-
   if (list.length === 0) {
     div.innerHTML = '<div class="empty"><div class="icon">👴</div>ยังไม่มีผู้สูงอายุ<br>กดปุ่ม "+ เพิ่มผู้สูงอายุ" เพื่อเริ่มต้น</div>';
     return;
   }
-
   const showMode = cfg && cfg.hasObtMode;
   let html = '<table><thead><tr><th>ชื่อ-สกุล</th><th>อายุ</th><th>หมู่</th><th>ADL</th><th>CG</th>';
   if (showMode) html += '<th>โหมด PDF</th>';
@@ -1210,7 +1104,6 @@ function renderElderlyTable() {
   html += '</tbody></table>';
   div.innerHTML = html;
 }
-
 // ============================================
 // RECORD VISIT
 // ============================================
@@ -1227,16 +1120,13 @@ function onRecCGChange() {
     list.map(e => `<option value="${e.id}">${e.name}${e.age ? ' (อายุ ' + e.age + ' ปี)' : ''}</option>`).join('');
   document.getElementById('recElderlyInfo').classList.add('hidden');
 }
-
 function onRecElderlyChange() {
   const id = document.getElementById('recElderly').value;
   const info = document.getElementById('recElderlyInfo');
   const dayCountInput = document.getElementById('recDayCount');
-
   if (!id) { info.classList.add('hidden'); return; }
   const e = allElderly.find(x => x.id === id);
   if (!e) return;
-
   const mode = e.pdfMode || 'normal';
   if (mode === 'obt') {
     info.innerHTML = `<strong>${e.name}</strong> | อายุ ${e.age || '-'} ปี | <span class="badge badge-purple">โหมด อบต. (10-12 รูป/หน้า)</span>`;
@@ -1247,15 +1137,12 @@ function onRecElderlyChange() {
   }
   info.classList.remove('hidden');
 }
-
 function openDatePicker() {
   const month = parseInt(document.getElementById('recMonth').value);
   const year = parseInt(document.getElementById('recYear').value);
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
-
   datePickerSelected = [...recSelectedDates];
-
   const grid = document.getElementById('dateGrid');
   let html = '';
   ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].forEach(d => {
@@ -1271,7 +1158,6 @@ function openDatePicker() {
   updateDatePickerCount();
   document.getElementById('dateModal').classList.add('show');
 }
-
 function toggleDate(dateStr, el) {
   const idx = datePickerSelected.indexOf(dateStr);
   if (idx >= 0) {
@@ -1287,17 +1173,14 @@ function toggleDate(dateStr, el) {
   }
   updateDatePickerCount();
 }
-
 function updateDatePickerCount() {
   document.getElementById('datePickerCount').textContent = `เลือกแล้ว ${datePickerSelected.length} วัน`;
 }
-
 function confirmDatePicker() {
   recSelectedDates = [...datePickerSelected].sort();
   renderSelectedDates();
   closeModal('dateModal');
 }
-
 function renderSelectedDates() {
   const div = document.getElementById('selectedDates');
   if (recSelectedDates.length === 0) {
@@ -1311,17 +1194,14 @@ function renderSelectedDates() {
     return `<div class="date-chip">${day} ${month} <span class="x" onclick="removeDate('${d}')">×</span></div>`;
   }).join('');
 }
-
 function removeDate(dateStr) {
   recSelectedDates = recSelectedDates.filter(d => d !== dateStr);
   renderSelectedDates();
 }
-
 document.addEventListener('change', function(e) {
   if (e.target.id === 'recPhotoInput') handlePhotoInput(e.target);
   if (e.target.id === 'editVisitPhoto') handleEditPhotoChange(e);
 });
-
 function handlePhotoInput(input) {
   const files = Array.from(input.files);
   files.forEach(file => {
@@ -1347,7 +1227,6 @@ function handlePhotoInput(input) {
   });
   input.value = '';
 }
-
 function renderRecPhotos() {
   const div = document.getElementById('recPhotoList');
   div.innerHTML = recSelectedPhotos.map((p, idx) =>
@@ -1357,26 +1236,21 @@ function renderRecPhotos() {
     </div>`
   ).join('');
 }
-
 function removePhoto(idx) {
   recSelectedPhotos.splice(idx, 1);
   renderRecPhotos();
 }
-
 async function submitRecord() {
   const cgCode = document.getElementById('recCG').value;
   const elderlyId = document.getElementById('recElderly').value;
   const note = document.getElementById('recNote').value;
-
   if (!cgCode) { alert('กรุณาเลือก CG'); return; }
   if (!elderlyId) { alert('กรุณาเลือกผู้สูงอายุ'); return; }
   if (recSelectedDates.length === 0) { alert('กรุณาเลือกวันที่อย่างน้อย 1 วัน'); return; }
   if (recSelectedPhotos.length === 0) { alert('กรุณาเลือกรูปอย่างน้อย 1 รูป'); return; }
-
   const cg = allCGs.find(c => c.code === cgCode);
   const elderly = allElderly.find(e => e.id === elderlyId);
   if (!cg || !elderly) { alert('ไม่พบข้อมูล'); return; }
-
   const dates = [...recSelectedDates].sort();
   const shuffled = shuffleArray([...recSelectedPhotos]);
   const pairs = [];
@@ -1384,11 +1258,9 @@ async function submitRecord() {
     const photo = shuffled[i % shuffled.length];
     pairs.push({ date: dates[i], photo: photo });
   }
-
   const btn = document.getElementById('recSubmitBtn');
   btn.disabled = true;
   btn.innerHTML = '⏳ กำลังอัปโหลด... 0/' + pairs.length;
-
   try {
     let uploaded = 0;
     for (const pair of pairs) {
@@ -1410,7 +1282,6 @@ async function submitRecord() {
       uploaded++;
       btn.innerHTML = '⏳ กำลังอัปโหลด... ' + uploaded + '/' + pairs.length;
     }
-
     showToast('✓ บันทึกสำเร็จ ' + pairs.length + ' รายการ');
     recSelectedDates = [];
     recSelectedPhotos = [];
@@ -1427,7 +1298,6 @@ async function submitRecord() {
     btn.innerHTML = '💾 บันทึกข้อมูล';
   }
 }
-
 function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -1435,7 +1305,6 @@ function shuffleArray(arr) {
   }
   return arr;
 }
-
 async function uploadToImgBB(base64) {
   const formData = new FormData();
   formData.append('image', base64);
@@ -1446,7 +1315,6 @@ async function uploadToImgBB(base64) {
   if (!json.success) throw new Error('ImgBB upload failed');
   return json.data.url;
 }
-
 // ============================================
 // DASHBOARD
 // ============================================
@@ -1454,17 +1322,14 @@ function loadDashboard() {
   if (!document.getElementById('dashStats')) return;
   const month = parseInt(document.getElementById('dashMonth').value);
   const year = parseInt(document.getElementById('dashYear').value);
-
   const monthVisits = allVisits.filter(v => {
     if (!v.visitDate) return false;
     const d = new Date(v.visitDate);
     return d.getFullYear() === year && (d.getMonth() + 1) === month;
   });
-
   const visitedSet = new Set(monthVisits.map(v => v.elderlyId));
   const activeElderly = allElderly.filter(e => e.status !== 'inactive');
   const cfg = HOSPITALS[currentHospital];
-
   document.getElementById('dashStats').innerHTML = `
     <div class="grid-stats">
       <div class="stat info"><div class="label">CG ทั้งหมด</div><div class="value">${allCGs.length}</div></div>
@@ -1473,7 +1338,6 @@ function loadDashboard() {
       <div class="stat warning"><div class="label">ยังไม่ได้เยี่ยม</div><div class="value">${activeElderly.length - visitedSet.size}</div></div>
       <div class="stat danger"><div class="label">รวมจำนวนครั้ง</div><div class="value">${monthVisits.length}</div><div class="sub">ครั้ง/รูป</div></div>
     </div>`;
-
   if (cfg && cfg.hasObtMode) {
     const totalNormal = activeElderly.filter(e => (e.pdfMode || 'normal') === 'normal').length;
     const totalObt = activeElderly.filter(e => e.pdfMode === 'obt').length;
@@ -1490,7 +1354,6 @@ function loadDashboard() {
         <div class="stat info"><div class="label">ผู้สูงอายุ</div><div class="value">${activeElderly.length}</div><div class="sub">คน</div></div>
       </div>`;
   }
-
   const div = document.getElementById('dashCgList');
   if (allCGs.length === 0) { div.innerHTML = '<div class="empty">ยังไม่มี CG</div>'; return; }
   let html = '<div class="table-responsive"><table><thead><tr><th>CG</th><th>ผู้สูงอายุ</th><th>เยี่ยมแล้ว</th><th>ครั้งที่เยี่ยม</th><th>ความก้าวหน้า</th></tr></thead><tbody>';
@@ -1509,15 +1372,12 @@ function loadDashboard() {
   });
   html += '</tbody></table></div>';
   div.innerHTML = html;
-
   renderBrowser();
 }
-
 // ============================================
 // BROWSER (VIEW/EDIT/DELETE)
 // ============================================
 let browserState = { level: 'cg', cgCode: null, elderlyId: null };
-
 function renderBrowser() {
   const div = document.getElementById('dashBrowser');
   if (!div) return;
@@ -1528,12 +1388,10 @@ function renderBrowser() {
     const d = new Date(v.visitDate);
     return d.getFullYear() === year && (d.getMonth() + 1) === month;
   });
-
   if (browserState.level === 'cg') renderBrowserCgLevel(div, monthVisits);
   else if (browserState.level === 'elderly') renderBrowserElderlyLevel(div, monthVisits);
   else if (browserState.level === 'visits') renderBrowserVisitsLevel(div, monthVisits);
 }
-
 function renderBrowserCgLevel(div, monthVisits) {
   const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
   const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
@@ -1561,7 +1419,6 @@ function renderBrowserCgLevel(div, monthVisits) {
   }
   div.innerHTML = html;
 }
-
 function renderBrowserElderlyLevel(div, monthVisits) {
   const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
   const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
@@ -1600,7 +1457,6 @@ function renderBrowserElderlyLevel(div, monthVisits) {
   }
   div.innerHTML = html;
 }
-
 function renderBrowserVisitsLevel(div, monthVisits) {
   const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
   const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
@@ -1641,16 +1497,13 @@ function renderBrowserVisitsLevel(div, monthVisits) {
   }
   div.innerHTML = html;
 }
-
 function enterBrowserCG(cgCode) { browserState = { level: 'elderly', cgCode: cgCode, elderlyId: null }; renderBrowser(); }
 function enterBrowserElderly(elderlyId) { browserState = { level: 'visits', cgCode: browserState.cgCode, elderlyId: elderlyId }; renderBrowser(); }
 function exitBrowser() { browserState = { level: 'cg', cgCode: null, elderlyId: null }; renderBrowser(); }
-
 // ============================================
 // EDIT/DELETE VISIT
 // ============================================
 let editVisitNewPhoto = null;
-
 function openEditVisit(visitId) {
   const v = allVisits.find(x => x.id === visitId);
   if (!v) return;
@@ -1665,7 +1518,6 @@ function openEditVisit(visitId) {
   `;
   document.getElementById('editVisitModal').classList.add('show');
 }
-
 function handleEditPhotoChange(e) {
   const file = e.target.files[0];
   if (!file) { editVisitNewPhoto = null; return; }
@@ -1692,7 +1544,6 @@ function handleEditPhotoChange(e) {
   };
   reader.readAsDataURL(file);
 }
-
 async function saveEditVisit() {
   const visitId = document.getElementById('editVisitId').value;
   const v = allVisits.find(x => x.id === visitId);
@@ -1700,11 +1551,9 @@ async function saveEditVisit() {
   const newDate = document.getElementById('editVisitDate').value;
   const newNote = document.getElementById('editVisitNote').value;
   if (!newDate) { alert('กรุณาใส่วันที่'); return; }
-
   const btn = document.getElementById('editVisitSaveBtn');
   btn.disabled = true;
   btn.textContent = 'กำลังบันทึก...';
-
   try {
     const updates = { visitDate: newDate, note: newNote };
     if (editVisitNewPhoto) {
@@ -1722,7 +1571,6 @@ async function saveEditVisit() {
     btn.textContent = 'บันทึก';
   }
 }
-
 function confirmDeleteVisit(visitId) {
   const v = allVisits.find(x => x.id === visitId);
   if (!v) return;
@@ -1734,7 +1582,6 @@ function confirmDeleteVisit(visitId) {
     } catch (e) { alert('เกิดข้อผิดพลาด: ' + e.message); }
   });
 }
-
 // ลบรายการเยี่ยมทั้งหมดของผู้สูงอายุคนหนึ่งในเดือนที่เลือก
 function confirmDeleteAllForElderly(elderlyId) {
   const month = parseInt(document.getElementById('dashMonth').value);
@@ -1758,17 +1605,14 @@ function confirmDeleteAllForElderly(elderlyId) {
     } catch (e) { alert('เกิดข้อผิดพลาด: ' + e.message); }
   });
 }
-
 // เพิ่มการเยี่ยมทีละ 1 รูป
 let addSinglePhotoData = null;
-
 function openAddSingleVisit() {
   const el = allElderly.find(e => e.id === browserState.elderlyId);
   const cg = allCGs.find(c => c.code === browserState.cgCode);
   if (!el || !cg) return;
   const month = parseInt(document.getElementById('dashMonth').value);
   const year = parseInt(document.getElementById('dashYear').value);
-
   document.getElementById('addSingleInfo').innerHTML = `<strong>${el.name}</strong> | CG: ${cg.name}<br>เดือน ${THAI_MONTHS[month]} ${year + 543}`;
   // Set default date to 1st of the selected month
   const dateStr = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -1782,7 +1626,6 @@ function openAddSingleVisit() {
   addSinglePhotoData = null;
   document.getElementById('addSingleVisitModal').classList.add('show');
 }
-
 document.addEventListener('change', function(e) {
   if (e.target.id === 'addSinglePhoto') {
     const file = e.target.files[0];
@@ -1808,7 +1651,6 @@ document.addEventListener('change', function(e) {
     reader.readAsDataURL(file);
   }
 });
-
 async function saveAddSingleVisit() {
   const el = allElderly.find(e => e.id === browserState.elderlyId);
   const cg = allCGs.find(c => c.code === browserState.cgCode);
@@ -1817,7 +1659,6 @@ async function saveAddSingleVisit() {
   const note = document.getElementById('addSingleNote').value;
   if (!date) { alert('กรุณาเลือกวันที่'); return; }
   if (!addSinglePhotoData) { alert('กรุณาเลือกรูป'); return; }
-
   const btn = document.getElementById('addSingleSaveBtn');
   btn.disabled = true;
   btn.textContent = 'กำลังอัปโหลด...';
@@ -1845,7 +1686,6 @@ async function saveAddSingleVisit() {
     btn.textContent = 'บันทึก';
   }
 }
-
 // ============================================
 // PDF GENERATION (with adaptive grid)
 // ============================================
@@ -1853,19 +1693,16 @@ async function generatePDF() {
   const month = parseInt(document.getElementById('rptMonth').value);
   const year = parseInt(document.getElementById('rptYear').value);
   const cgFilter = document.getElementById('rptCG').value;
-
   let visits = allVisits.filter(v => {
     if (!v.visitDate) return false;
     const d = new Date(v.visitDate);
     return d.getFullYear() === year && (d.getMonth() + 1) === month;
   });
   if (cgFilter) visits = visits.filter(v => v.cgCode === cgFilter);
-
   if (visits.length === 0) {
     document.getElementById('reportAlert').innerHTML = '<div class="alert alert-warning">ไม่มีข้อมูลการเยี่ยมในเดือนที่เลือก</div>';
     return;
   }
-
   const grouped = {};
   visits.forEach(v => {
     if (!grouped[v.elderlyId]) {
@@ -1882,12 +1719,10 @@ async function generatePDF() {
     grouped[v.elderlyId].photos.push({ url: v.photoUrl, date: v.visitDate });
   });
   Object.values(grouped).forEach(g => g.photos.sort((a, b) => new Date(a.date) - new Date(b.date)));
-
   const btn = document.getElementById('rptBtn');
   btn.disabled = true;
   document.getElementById('reportAlert').innerHTML = '<div class="alert alert-warning">⏳ กำลังสร้าง PDF...</div>';
   document.getElementById('rptResult').innerHTML = '';
-
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -1895,11 +1730,9 @@ async function generatePDF() {
     const buddhistYear = year + 543;
     let pageIdx = 0;
     const groupArr = Object.values(grouped);
-
     for (let gi = 0; gi < groupArr.length; gi++) {
       const item = groupArr[gi];
       btn.innerHTML = `⏳ หน้า ${gi + 1}/${groupArr.length}`;
-
       if (item.pdfMode === 'obt') {
         const chunks = chunkArray(item.photos, 12);
         for (const chunk of chunks) {
@@ -1918,7 +1751,6 @@ async function generatePDF() {
         }
       }
     }
-
     const cfg = HOSPITALS[currentHospital];
     const hospitalTag = cfg.id === 'thapthimsiam' ? 'ทับทิมสยาม07' : 'สำโรงเกียรติ';
     const filename = `สรุปการเยี่ยม_${hospitalTag}_${monthName}${buddhistYear}${cgFilter ? '_' + (allCGs.find(c => c.code === cgFilter) || {}).name : ''}.pdf`;
@@ -1933,7 +1765,6 @@ async function generatePDF() {
     btn.innerHTML = '📄 สร้าง PDF';
   }
 }
-
 // Adaptive grid for normal mode - fit page based on photo count
 function getGridConfig(n) {
   // Returns { cols, rows, fontSize }
@@ -1943,13 +1774,11 @@ function getGridConfig(n) {
   if (n <= 12) return { cols: 4, rows: 3, fontSize: 13 };
   return { cols: 4, rows: 4, fontSize: 12 }; // 13-16
 }
-
 async function renderNormalPage(pdf, item, photos, monthName, buddhistYear) {
   const cfg = HOSPITALS[currentHospital];
   const grid = getGridConfig(photos.length);
   const gap = photos.length <= 4 ? 20 : (photos.length <= 9 ? 14 : 10);
   const pad = photos.length <= 4 ? 50 : 40;
-
   const html = `
     <div style="width:794px;padding:${pad}px ${pad}px 30px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;min-height:1123px;">
       <div style="text-align:center;margin-bottom:${photos.length <= 4 ? 30 : 20}px;">
@@ -1974,7 +1803,6 @@ async function renderNormalPage(pdf, item, photos, monthName, buddhistYear) {
   `;
   await renderHtmlToPdfPage(pdf, html);
 }
-
 async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
   const cfg = HOSPITALS[currentHospital];
   const dateStr = photos.map(p => new Date(p.date).getDate()).join(',');
@@ -1982,7 +1810,6 @@ async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
   let cols;
   if (n <= 10) cols = 5;
   else cols = 4; // 11-12
-
   const html = `
     <div style="width:794px;padding:50px 50px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;">
       <div style="text-align:center;margin-bottom:18px;">
@@ -2007,7 +1834,6 @@ async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
   `;
   await renderHtmlToPdfPage(pdf, html);
 }
-
 async function renderHtmlToPdfPage(pdf, html) {
   const container = document.getElementById('pdfRender');
   container.innerHTML = html;
@@ -2023,13 +1849,11 @@ async function renderHtmlToPdfPage(pdf, html) {
   const imgData = canvas.toDataURL('image/jpeg', 0.92);
   pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
 }
-
 function chunkArray(arr, size) {
   const out = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 }
-
 function formatThaiDateShort(dateStr) {
   const d = new Date(dateStr);
   const day = d.getDate();
@@ -2037,7 +1861,6 @@ function formatThaiDateShort(dateStr) {
   const year = (d.getFullYear() + 543).toString().slice(-2);
   return `${day} ${month} ${year}`;
 }
-
 function formatThaiDateTime(isoStr) {
   if (!isoStr) return '-';
   const d = new Date(isoStr);
@@ -2049,9 +1872,7 @@ function formatThaiDateTime(isoStr) {
   const mm = String(d.getMinutes()).padStart(2, '0');
   return `${day} ${month} ${year} ${hh}:${mm}`;
 }
-
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-
 function showToast(msg) {
   const t = document.createElement('div');
   t.className = 'toast';
@@ -2059,7 +1880,6 @@ function showToast(msg) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2500);
 }
-
 function showConfirm(icon, message, sub, callback) {
   document.getElementById('confirmIcon').textContent = icon;
   document.getElementById('confirmMsg').textContent = message;
@@ -2067,13 +1887,11 @@ function showConfirm(icon, message, sub, callback) {
   confirmCallback = callback;
   document.getElementById('confirmOverlay').classList.add('show');
 }
-
 function closeConfirm(yes) {
   document.getElementById('confirmOverlay').classList.remove('show');
   if (yes && confirmCallback) confirmCallback();
   confirmCallback = null;
 }
-
 document.querySelectorAll('.modal').forEach(modal => {
   modal.addEventListener('click', function(e) {
     if (e.target === modal) modal.classList.remove('show');

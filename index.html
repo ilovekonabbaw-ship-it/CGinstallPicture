@@ -280,6 +280,16 @@ table tr:hover td { background: #FAFBFD; }
     </div>
     <!-- BROWSER -->
     <div id="tab-browser" class="tab-content hidden">
+      <div class="filter-bar">
+        <span style="font-weight:500;">เดือน:</span>
+        <select id="brwMonth"></select>
+        <select id="brwYear"></select>
+        <button class="btn btn-secondary btn-sm" onclick="loadBrowserPage()">🔄 รีเฟรช</button>
+      </div>
+      <div class="card">
+        <h2>👥 สถานะการเยี่ยมของ CG รายเดือน</h2>
+        <div id="brwCgList"></div>
+      </div>
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <h2>📁 ดูข้อมูลที่บันทึก</h2>
@@ -820,9 +830,10 @@ function initMonthYearSelectors() {
   for (let y = currentYearAD - 2; y <= currentYearAD + 1; y++) {
     yearHTML += `<option value="${y}" ${y === currentYearAD ? 'selected' : ''}>${y + 543}</option>`;
   }
-  ['dashMonth', 'recMonth', 'rptMonth'].forEach(id => document.getElementById(id).innerHTML = monthHTML);
-  ['dashYear', 'recYear', 'rptYear'].forEach(id => document.getElementById(id).innerHTML = yearHTML);
+  ['dashMonth', 'recMonth', 'rptMonth', 'brwMonth'].forEach(id => document.getElementById(id).innerHTML = monthHTML);
+  ['dashYear', 'recYear', 'rptYear', 'brwYear'].forEach(id => document.getElementById(id).innerHTML = yearHTML);
   ['dashMonth', 'dashYear'].forEach(id => document.getElementById(id).onchange = loadDashboard);
+  ['brwMonth', 'brwYear'].forEach(id => document.getElementById(id).onchange = loadBrowserPage);
 }
 function loadAllData() {
   const hospitalId = currentHospital;
@@ -1372,17 +1383,57 @@ function loadDashboard() {
   });
   html += '</tbody></table></div>';
   div.innerHTML = html;
-  renderBrowser();
+  loadBrowserPage();
 }
 // ============================================
 // BROWSER (VIEW/EDIT/DELETE)
 // ============================================
 let browserState = { level: 'cg', cgCode: null, elderlyId: null };
+
+// Load ทั้งแท็บ "ดูข้อมูลที่บันทึก" (สถานะ CG + Browser)
+function loadBrowserPage() {
+  if (!document.getElementById('brwCgList')) return;
+  const month = parseInt(document.getElementById('brwMonth').value);
+  const year = parseInt(document.getElementById('brwYear').value);
+  const monthVisits = allVisits.filter(v => {
+    if (!v.visitDate) return false;
+    const d = new Date(v.visitDate);
+    return d.getFullYear() === year && (d.getMonth() + 1) === month;
+  });
+  const activeElderly = allElderly.filter(e => e.status !== 'inactive');
+
+  // CG status card (คัดลอกโครงจาก loadDashboard)
+  const cgListDiv = document.getElementById('brwCgList');
+  if (allCGs.length === 0) {
+    cgListDiv.innerHTML = '<div class="empty">ยังไม่มี CG</div>';
+  } else {
+    let html = '<div class="table-responsive"><table><thead><tr><th>CG</th><th>ผู้สูงอายุ</th><th>เยี่ยมแล้ว</th><th>ครั้งที่เยี่ยม</th><th>ความก้าวหน้า</th></tr></thead><tbody>';
+    allCGs.forEach(cg => {
+      const cgElderly = activeElderly.filter(e => e.cgCode === cg.code);
+      const cgVisits = monthVisits.filter(v => v.cgCode === cg.code);
+      const cgVisited = new Set(cgVisits.map(v => v.elderlyId)).size;
+      const pct = cgElderly.length > 0 ? Math.round(cgVisited / cgElderly.length * 100) : 0;
+      html += `<tr>
+        <td><strong>${cg.name}</strong><br><small style="color:#888;">${cg.code}</small></td>
+        <td>${cgElderly.length}</td>
+        <td>${cgVisited}/${cgElderly.length}</td>
+        <td>${cgVisits.length} ครั้ง</td>
+        <td><div style="display:flex;align-items:center;gap:8px;"><span style="min-width:38px;font-weight:600;">${pct}%</span><div class="progress" style="flex:1;"><div class="progress-bar" style="width:${pct}%"></div></div></div></td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    cgListDiv.innerHTML = html;
+  }
+
+  // Browser section
+  renderBrowser();
+}
+
 function renderBrowser() {
   const div = document.getElementById('dashBrowser');
   if (!div) return;
-  const month = parseInt(document.getElementById('dashMonth').value);
-  const year = parseInt(document.getElementById('dashYear').value);
+  const month = parseInt(document.getElementById('brwMonth').value);
+  const year = parseInt(document.getElementById('brwYear').value);
   const monthVisits = allVisits.filter(v => {
     if (!v.visitDate) return false;
     const d = new Date(v.visitDate);

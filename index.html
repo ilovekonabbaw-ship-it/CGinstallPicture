@@ -239,6 +239,11 @@ table tr:hover td { background: #FAFBFD; }
             <select id="recElderly" onchange="onRecElderlyChange()">
               <option value="">-- เลือก CG ก่อน --</option>
             </select>
+            <div id="recElderlySearchBox" class="hidden" style="position:relative;">
+              <input type="text" id="recElderlySearch" placeholder="🔍 พิมพ์ชื่อผู้สูงอายุเพื่อค้นหา..." oninput="onRecElderlySearchInput()" onfocus="onRecElderlySearchInput()" autocomplete="off" style="width:100%;">
+              <input type="hidden" id="recElderlySearchId">
+              <div id="recElderlySuggestions" class="hidden" style="position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #E0E4EA;border-top:none;border-radius:0 0 8px 8px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
+            </div>
           </div>
         </div>
         <div id="recElderlyInfo" class="alert alert-info hidden"></div>
@@ -1118,21 +1123,88 @@ function renderElderlyTable() {
 // ============================================
 // RECORD VISIT
 // ============================================
+// CG พิเศษที่ค้นหาผู้สูงอายุได้ทุกคน
+function isSearchModeCG(cg) {
+  if (!cg) return false;
+  const name = (cg.name || '').replace(/\s+/g, '');
+  return (name.includes('ณัฏฐา') || name.includes('ณัฐฐา')) && name.includes('บริบูร');
+}
+
 function onRecCGChange() {
   const cgCode = document.getElementById('recCG').value;
   const sel = document.getElementById('recElderly');
+  const searchBox = document.getElementById('recElderlySearchBox');
+  const searchInput = document.getElementById('recElderlySearch');
+  const searchId = document.getElementById('recElderlySearchId');
+
+  searchInput.value = '';
+  searchId.value = '';
+  document.getElementById('recElderlySuggestions').classList.add('hidden');
+  document.getElementById('recElderlyInfo').classList.add('hidden');
+
   if (!cgCode) {
     sel.innerHTML = '<option value="">-- เลือก CG ก่อน --</option>';
-    document.getElementById('recElderlyInfo').classList.add('hidden');
+    sel.classList.remove('hidden');
+    searchBox.classList.add('hidden');
     return;
   }
-  const list = allElderly.filter(e => e.cgCode === cgCode && e.status === 'active');
-  sel.innerHTML = '<option value="">-- เลือกผู้สูงอายุ --</option>' +
-    list.map(e => `<option value="${e.id}">${e.name}${e.age ? ' (อายุ ' + e.age + ' ปี)' : ''}</option>`).join('');
-  document.getElementById('recElderlyInfo').classList.add('hidden');
+
+  const cg = allCGs.find(c => c.code === cgCode);
+  if (cg && isSearchModeCG(cg)) {
+    sel.classList.add('hidden');
+    searchBox.classList.remove('hidden');
+    searchInput.placeholder = '🔍 พิมพ์ชื่อผู้สูงอายุ (ค้นได้ทุกคนในระบบ)';
+  } else {
+    sel.classList.remove('hidden');
+    searchBox.classList.add('hidden');
+    const list = allElderly.filter(e => e.cgCode === cgCode && e.status === 'active');
+    sel.innerHTML = '<option value="">-- เลือกผู้สูงอายุ --</option>' +
+      list.map(e => `<option value="${e.id}">${e.name}${e.age ? ' (อายุ ' + e.age + ' ปี)' : ''}</option>`).join('');
+  }
 }
-function onRecElderlyChange() {
-  const id = document.getElementById('recElderly').value;
+
+// AUTOCOMPLETE — ค้นหาผู้สูงอายุทุกคน
+function onRecElderlySearchInput() {
+  const q = document.getElementById('recElderlySearch').value.trim().toLowerCase();
+  const box = document.getElementById('recElderlySuggestions');
+  let list = allElderly.filter(e => e.status === 'active');
+  if (q) {
+    list = list.filter(e => {
+      const name = (e.name || '').toLowerCase();
+      const cg = (allCGs.find(c => c.code === e.cgCode) || {}).name || '';
+      return name.includes(q) || cg.toLowerCase().includes(q);
+    });
+  }
+  if (list.length === 0) {
+    box.innerHTML = '<div style="padding:12px;color:#888;text-align:center;">ไม่พบผู้สูงอายุ</div>';
+    box.classList.remove('hidden');
+    return;
+  }
+  box.innerHTML = list.slice(0, 50).map(e => {
+    const cg = allCGs.find(c => c.code === e.cgCode);
+    const cgName = cg ? cg.name : '-';
+    const ageStr = e.age ? ` · ${e.age} ปี` : '';
+    return `<div style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #F1F5F2;" onmouseover="this.style.background='#F0F9F5'" onmouseout="this.style.background='white'" onclick="selectRecElderlyFromSearch('${e.id}')">
+      <div style="font-weight:500;">${e.name}${ageStr}</div>
+      <div style="font-size:12px;color:#888;">CG: ${cgName}</div>
+    </div>`;
+  }).join('');
+  if (list.length > 50) {
+    box.innerHTML += '<div style="padding:8px;color:#888;text-align:center;font-size:12px;">แสดง 50 คนแรก... พิมพ์เพิ่มเพื่อกรอง</div>';
+  }
+  box.classList.remove('hidden');
+}
+
+function selectRecElderlyFromSearch(elderlyId) {
+  const e = allElderly.find(x => x.id === elderlyId);
+  if (!e) return;
+  document.getElementById('recElderlySearch').value = e.name + (e.age ? ' (อายุ ' + e.age + ' ปี)' : '');
+  document.getElementById('recElderlySearchId').value = elderlyId;
+  document.getElementById('recElderlySuggestions').classList.add('hidden');
+  showRecElderlyInfo(elderlyId);
+}
+
+function showRecElderlyInfo(id) {
   const info = document.getElementById('recElderlyInfo');
   const dayCountInput = document.getElementById('recDayCount');
   if (!id) { info.classList.add('hidden'); return; }
@@ -1147,6 +1219,18 @@ function onRecElderlyChange() {
     if (!dayCountInput.value) dayCountInput.value = 4;
   }
   info.classList.remove('hidden');
+}
+
+document.addEventListener('click', function(e) {
+  const box = document.getElementById('recElderlySearchBox');
+  if (box && !box.contains(e.target)) {
+    const s = document.getElementById('recElderlySuggestions');
+    if (s) s.classList.add('hidden');
+  }
+});
+function onRecElderlyChange() {
+  const id = document.getElementById('recElderly').value;
+  showRecElderlyInfo(id);
 }
 function openDatePicker() {
   const month = parseInt(document.getElementById('recMonth').value);
@@ -1253,7 +1337,12 @@ function removePhoto(idx) {
 }
 async function submitRecord() {
   const cgCode = document.getElementById('recCG').value;
-  const elderlyId = document.getElementById('recElderly').value;
+  // อ่าน elderlyId จาก search box ถ้าเปิดโหมดค้นหา, ไม่งั้นใช้ dropdown
+  const searchBox = document.getElementById('recElderlySearchBox');
+  const isSearchMode = searchBox && !searchBox.classList.contains('hidden');
+  const elderlyId = isSearchMode
+    ? document.getElementById('recElderlySearchId').value
+    : document.getElementById('recElderly').value;
   const note = document.getElementById('recNote').value;
   if (!cgCode) { alert('กรุณาเลือก CG'); return; }
   if (!elderlyId) { alert('กรุณาเลือกผู้สูงอายุ'); return; }
@@ -1389,7 +1478,6 @@ function loadDashboard() {
 // BROWSER (VIEW/EDIT/DELETE)
 // ============================================
 let browserState = { level: 'cg', cgCode: null, elderlyId: null };
-
 // Load ทั้งแท็บ "ดูข้อมูลที่บันทึก" (สถานะ CG + Browser)
 function loadBrowserPage() {
   if (!document.getElementById('brwCgList')) return;
@@ -1401,7 +1489,6 @@ function loadBrowserPage() {
     return d.getFullYear() === year && (d.getMonth() + 1) === month;
   });
   const activeElderly = allElderly.filter(e => e.status !== 'inactive');
-
   // CG status card (คัดลอกโครงจาก loadDashboard)
   const cgListDiv = document.getElementById('brwCgList');
   if (allCGs.length === 0) {
@@ -1424,11 +1511,9 @@ function loadBrowserPage() {
     html += '</tbody></table></div>';
     cgListDiv.innerHTML = html;
   }
-
   // Browser section
   renderBrowser();
 }
-
 function renderBrowser() {
   const div = document.getElementById('dashBrowser');
   if (!div) return;

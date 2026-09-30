@@ -1123,7 +1123,7 @@ function renderElderlyTable() {
 // ============================================
 // RECORD VISIT
 // ============================================
-// CG พิเศษที่ค้นหาผู้สูงอายุได้ทุกคน
+// CG พิเศษที่ค้นหาผู้สูงอายุได้ทุกคน (ณัฏฐา บริบูรณ์)
 function isSearchModeCG(cg) {
   if (!cg) return false;
   const name = (cg.name || '').replace(/\s+/g, '');
@@ -1163,7 +1163,6 @@ function onRecCGChange() {
   }
 }
 
-// AUTOCOMPLETE — ค้นหาผู้สูงอายุทุกคน
 function onRecElderlySearchInput() {
   const q = document.getElementById('recElderlySearch').value.trim().toLowerCase();
   const box = document.getElementById('recElderlySuggestions');
@@ -1337,7 +1336,6 @@ function removePhoto(idx) {
 }
 async function submitRecord() {
   const cgCode = document.getElementById('recCG').value;
-  // อ่าน elderlyId จาก search box ถ้าเปิดโหมดค้นหา, ไม่งั้นใช้ dropdown
   const searchBox = document.getElementById('recElderlySearchBox');
   const isSearchMode = searchBox && !searchBox.classList.contains('hidden');
   const elderlyId = isSearchMode
@@ -1420,8 +1418,8 @@ async function uploadToImgBB(base64) {
 // ============================================
 function loadDashboard() {
   if (!document.getElementById('dashStats')) return;
-  const month = parseInt(document.getElementById('dashMonth').value);
-  const year = parseInt(document.getElementById('dashYear').value);
+  const month = parseInt(document.getElementById('brwMonth').value);
+  const year = parseInt(document.getElementById('brwYear').value);
   const monthVisits = allVisits.filter(v => {
     if (!v.visitDate) return false;
     const d = new Date(v.visitDate);
@@ -1529,8 +1527,8 @@ function renderBrowser() {
   else if (browserState.level === 'visits') renderBrowserVisitsLevel(div, monthVisits);
 }
 function renderBrowserCgLevel(div, monthVisits) {
-  const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
-  const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
+  const monthName = THAI_MONTHS[parseInt(document.getElementById('brwMonth').value)];
+  const buddhistYear = parseInt(document.getElementById('brwYear').value) + 543;
   const byCg = {};
   monthVisits.forEach(v => {
     if (!byCg[v.cgCode]) byCg[v.cgCode] = { cgCode: v.cgCode, cgName: v.cgName, count: 0, elderlySet: new Set() };
@@ -1556,8 +1554,8 @@ function renderBrowserCgLevel(div, monthVisits) {
   div.innerHTML = html;
 }
 function renderBrowserElderlyLevel(div, monthVisits) {
-  const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
-  const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
+  const monthName = THAI_MONTHS[parseInt(document.getElementById('brwMonth').value)];
+  const buddhistYear = parseInt(document.getElementById('brwYear').value) + 543;
   const cg = allCGs.find(c => c.code === browserState.cgCode);
   const cgVisits = monthVisits.filter(v => v.cgCode === browserState.cgCode);
   const byElderly = {};
@@ -1594,8 +1592,8 @@ function renderBrowserElderlyLevel(div, monthVisits) {
   div.innerHTML = html;
 }
 function renderBrowserVisitsLevel(div, monthVisits) {
-  const monthName = THAI_MONTHS[parseInt(document.getElementById('dashMonth').value)];
-  const buddhistYear = parseInt(document.getElementById('dashYear').value) + 543;
+  const monthName = THAI_MONTHS[parseInt(document.getElementById('brwMonth').value)];
+  const buddhistYear = parseInt(document.getElementById('brwYear').value) + 543;
   const cg = allCGs.find(c => c.code === browserState.cgCode);
   const elderly = allElderly.find(e => e.id === browserState.elderlyId);
   const visits = monthVisits
@@ -1720,8 +1718,8 @@ function confirmDeleteVisit(visitId) {
 }
 // ลบรายการเยี่ยมทั้งหมดของผู้สูงอายุคนหนึ่งในเดือนที่เลือก
 function confirmDeleteAllForElderly(elderlyId) {
-  const month = parseInt(document.getElementById('dashMonth').value);
-  const year = parseInt(document.getElementById('dashYear').value);
+  const month = parseInt(document.getElementById('brwMonth').value);
+  const year = parseInt(document.getElementById('brwYear').value);
   const monthName = THAI_MONTHS[month];
   const buddhistYear = year + 543;
   const el = allElderly.find(e => e.id === elderlyId);
@@ -1747,8 +1745,8 @@ function openAddSingleVisit() {
   const el = allElderly.find(e => e.id === browserState.elderlyId);
   const cg = allCGs.find(c => c.code === browserState.cgCode);
   if (!el || !cg) return;
-  const month = parseInt(document.getElementById('dashMonth').value);
-  const year = parseInt(document.getElementById('dashYear').value);
+  const month = parseInt(document.getElementById('brwMonth').value);
+  const year = parseInt(document.getElementById('brwYear').value);
   document.getElementById('addSingleInfo').innerHTML = `<strong>${el.name}</strong> | CG: ${cg.name}<br>เดือน ${THAI_MONTHS[month]} ${year + 543}`;
   // Set default date to 1st of the selected month
   const dateStr = `${year}-${String(month).padStart(2, '0')}-01`;

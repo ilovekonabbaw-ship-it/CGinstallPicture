@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -549,7 +550,15 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "835216376361",
   appId: "1:835216376361:web:b77aa5b7aa963dc8b7d238"
 };
-const IMGBB_API_KEY = "de40504c4b0201768b948f31525fad66";
+const IMGBB_API_KEY = "de40504c4b0201768b948f31525fad66"; // DEPRECATED - รูปใหม่ใช้ Firebase Storage
+// === Secondary Firebase project สำหรับเก็บรูป (sos-score) ===
+const SOS_STORAGE_CONFIG = {
+  apiKey: "AIzaSyBdqgB2Kgkpa3-XKK_0Tcmt2eFLP2yLrtQ",
+  authDomain: "sos-score.firebaseapp.com",
+  projectId: "sos-score",
+  storageBucket: "sos-score.firebasestorage.app",
+  appId: "1:1097577492169:web:199fb40c3ff48ed6fd2718"
+};
 const THAI_MONTHS = ['', 'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const THAI_MONTHS_SHORT = ['', 'ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 // ============================================
@@ -699,6 +708,7 @@ const HOSPITALS = {
 // STATE
 // ============================================
 let firebaseDB = null;
+let firebaseStorage = null;  // Firebase Storage ของ sos-score
 let currentHospital = null;  // 'thapthimsiam' | 'samrongkiat'
 let imgbbKey = IMGBB_API_KEY;
 let allCGs = [];
@@ -717,6 +727,9 @@ let elderlyListener = null;
 document.addEventListener('DOMContentLoaded', function() {
   firebase.initializeApp(FIREBASE_CONFIG);
   firebaseDB = firebase.database();
+  // Initialize secondary app สำหรับ Storage (project sos-score)
+  const storageApp = firebase.initializeApp(SOS_STORAGE_CONFIG, 'storageApp');
+  firebaseStorage = storageApp.storage();
   const saved = sessionStorage.getItem('selectedHospital');
   if (saved && HOSPITALS[saved]) {
     selectHospital(saved);
@@ -1403,15 +1416,33 @@ function shuffleArray(arr) {
   }
   return arr;
 }
+// ============================================
+// UPLOAD TO FIREBASE STORAGE (sos-score project)
+// ============================================
+async function uploadToFirebase(base64) {
+  if (!firebaseStorage) throw new Error('Firebase Storage ยังไม่พร้อม');
+  // แปลง base64 → Blob
+  const byteString = atob(base64);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+  const blob = new Blob([ab], { type: 'image/jpeg' });
+  // สุ่มชื่อไฟล์ ป้องกันซ้ำ
+  const filename = `visits/${Date.now()}_${Math.random().toString(36).slice(2, 10)}.jpg`;
+  const ref = firebaseStorage.ref(filename);
+  // Upload พร้อม metadata (cache-control = 1 ปี ให้ browser cache ได้)
+  const metadata = {
+    contentType: 'image/jpeg',
+    cacheControl: 'public, max-age=31536000'
+  };
+  const snapshot = await ref.put(blob, metadata);
+  const url = await snapshot.ref.getDownloadURL();
+  return url;
+}
+
+// Alias เก่า - เรียก Firebase แทน (backward compat)
 async function uploadToImgBB(base64) {
-  const formData = new FormData();
-  formData.append('image', base64);
-  const res = await fetch('https://api.imgbb.com/1/upload?key=' + imgbbKey, {
-    method: 'POST', body: formData
-  });
-  const json = await res.json();
-  if (!json.success) throw new Error('ImgBB upload failed');
-  return json.data.url;
+  return await uploadToFirebase(base64);
 }
 // ============================================
 // DASHBOARD
@@ -1828,244 +1859,42 @@ async function saveAddSingleVisit() {
 // ============================================
 const imageCache = {}; // url → dataURL (base64)
 
-// IndexedDB V5
-const DB_NAME = 'visitPhotoCacheV5';
-const DB_STORE = 'photos';
-let _db = null;
-function openDB() {
-  if (_db) return Promise.resolve(_db);
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
-    req.onsuccess = () => { _db = req.result; resolve(_db); };
-    req.onerror = () => reject(req.error);
-  });
-}
-async function dbGet(key) {
+async function preloadImage(url, timeoutMs = 20000) {
+  if (imageCache[url]) return imageCache[url];
   try {
-    const db = await openDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(DB_STORE, 'readonly');
-      const req = tx.objectStore(DB_STORE).get(key);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => resolve(null);
-    });
-  } catch (e) { return null; }
-}
-async function dbSet(key, value) {
-  try {
-    const db = await openDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(DB_STORE, 'readwrite');
-      tx.objectStore(DB_STORE).put(value, key);
-      tx.oncomplete = () => resolve(true);
-      tx.onerror = () => resolve(false);
-    });
-  } catch (e) { return false; }
-}
-
-async function validateDataUrl(dataUrl) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const timer = setTimeout(() => resolve(false), 5000);
-    img.onload = () => { clearTimeout(timer); resolve(img.naturalWidth >= 100 && img.naturalHeight >= 100); };
-    img.onerror = () => { clearTimeout(timer); resolve(false); };
-    img.src = dataUrl;
-  });
-}
-
-let _placeholderPng = null;
-function getPlaceholderPng() {
-  if (_placeholderPng) return _placeholderPng;
-  const canvas = document.createElement('canvas');
-  canvas.width = 400; canvas.height = 400;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fee2e2'; ctx.fillRect(0, 0, 400, 400);
-  ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 4; ctx.strokeRect(2, 2, 396, 396);
-  ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(150, 150); ctx.lineTo(250, 250);
-  ctx.moveTo(250, 150); ctx.lineTo(150, 250);
-  ctx.stroke();
-  ctx.fillStyle = '#991b1b'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('IMAGE FAILED', 200, 310);
-  ctx.font = '18px sans-serif'; ctx.fillText('Need re-upload', 200, 340);
-  _placeholderPng = canvas.toDataURL('image/png');
-  return _placeholderPng;
-}
-
-const CORS_PROXIES = [
-  'https://corsproxy.io/?url=',
-  'https://api.allorigins.win/raw?url=',
-  'https://api.codetabs.com/v1/proxy?quest='
-];
-
-async function _rawFetch(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(url, { signal: controller.signal, mode: 'cors' });
     clearTimeout(timer);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const blob = await res.blob();
-    if (blob.size < 1500) throw new Error('too small');
-    if (!blob.type.startsWith('image/')) throw new Error('not image');
     const dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
       reader.onerror = () => reject(new Error('read fail'));
       reader.readAsDataURL(blob);
     });
-    const valid = await validateDataUrl(dataUrl);
-    if (!valid) throw new Error('invalid');
-    return dataUrl;
-  } finally { clearTimeout(timer); }
-}
-
-async function _fetchHtml(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.text();
-  } finally { clearTimeout(timer); }
-}
-
-// 🔑 กู้ URL ใหม่จาก viewer page ของ ImgBB
-async function recoverImgbbUrl(deadUrl) {
-  // Extract id from: i.ibb.co/{id}/{filename}.jpg
-  const match = deadUrl.match(/i\.ibb\.co\/([^/]+)\//);
-  if (!match) return null;
-  const id = match[1];
-  const viewerUrl = `https://ibb.co/${id}`;
-  // ลอง scrape ผ่าน CORS proxy ทีละตัว
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const html = await _fetchHtml(proxy + encodeURIComponent(viewerUrl), 15000);
-      // หา og:image meta tag
-      let m = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
-      if (!m) m = html.match(/<link\s+rel="image_src"\s+href="([^"]+)"/i);
-      if (!m) m = html.match(/<img[^>]+id="image-viewer-container[^"]*"[^>]+src="([^"]+)"/i);
-      // regex หา direct URL ของ i.ibb.co
-      if (!m) m = html.match(/https:\/\/i\.ibb\.co\/[^"'\s]+\.(?:jpg|jpeg|png|gif|webp)/i);
-      if (m) {
-        const newUrl = m[1] || m[0];
-        if (newUrl && newUrl !== deadUrl && newUrl.startsWith('http')) {
-          console.log('[recover]', deadUrl.substr(-30), '→', newUrl.substr(-30));
-          return newUrl;
-        }
-      }
-    } catch (e) { /* ลอง proxy ถัดไป */ }
-  }
-  return null;
-}
-
-async function fetchImageOnce(url, timeoutMs) {
-  // 1. ลองดึงตรงก่อน
-  try { return await _rawFetch(url, timeoutMs); } catch (e) {}
-  // 2. ลอง CORS proxy
-  for (const proxy of CORS_PROXIES) {
-    try { return await _rawFetch(proxy + encodeURIComponent(url), timeoutMs); } catch (e) {}
-  }
-  // 3. 🔑 ลอง recover URL ใหม่จาก viewer page
-  const newUrl = await recoverImgbbUrl(url);
-  if (newUrl) {
-    // ลอง direct ก่อน
-    try { return await _rawFetch(newUrl, timeoutMs); } catch (e) {}
-    // ลอง proxy
-    for (const proxy of CORS_PROXIES) {
-      try { return await _rawFetch(proxy + encodeURIComponent(newUrl), timeoutMs); } catch (e) {}
-    }
-  }
-  throw new Error('all methods failed');
-}
-
-async function fetchImageViaTag(url, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
-    img.onload = () => {
-      clearTimeout(timer);
-      try {
-        if (img.naturalWidth < 100) throw new Error('too small');
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      } catch (e) { reject(e); }
-    };
-    img.onerror = () => { clearTimeout(timer); reject(new Error('img err')); };
-    img.src = url;
-  });
-}
-
-let failedVisits = [];
-
-async function preloadImage(url) {
-  if (imageCache[url]) return imageCache[url];
-  const cached = await dbGet(url);
-  if (cached && cached.length > 3000) {
-    const valid = await validateDataUrl(cached);
-    if (valid) { imageCache[url] = cached; return cached; }
-  }
-  // ลอง 3 ครั้ง (ครั้งที่ 3 จะ scrape viewer page)
-  const timeouts = [10000, 20000, 30000];
-  for (let attempt = 0; attempt < timeouts.length; attempt++) {
-    try {
-      const dataUrl = await fetchImageOnce(url, timeouts[attempt]);
-      imageCache[url] = dataUrl;
-      await dbSet(url, dataUrl);
-      return dataUrl;
-    } catch (e) {
-      if (attempt < timeouts.length - 1) await new Promise(r => setTimeout(r, 500));
-    }
-  }
-  try {
-    const dataUrl = await fetchImageViaTag(url, 20000);
     imageCache[url] = dataUrl;
-    await dbSet(url, dataUrl);
     return dataUrl;
-  } catch (e) { /* fail */ }
-  imageCache[url] = getPlaceholderPng();
-  return imageCache[url];
+  } catch (e) {
+    // ใช้ encodeURIComponent แทน btoa เพื่อรองรับภาษาไทย
+    imageCache[url] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#f3f4f6"/><text x="150" y="140" font-size="14" fill="#999" text-anchor="middle" font-family="sans-serif">รูปโหลดไม่สำเร็จ</text><text x="150" y="165" font-size="12" fill="#aaa" text-anchor="middle" font-family="sans-serif">(โหลดนานเกินไป)</text></svg>');
+    return imageCache[url];
+  }
 }
 
-async function preloadImagesParallel(urls, onProgress, visitLookup) {
-  failedVisits = [];
+async function preloadImagesParallel(urls, onProgress) {
   const unique = [...new Set(urls)];
   let done = 0;
-  const CONCURRENT = 4; // ลดลงเพราะมี scrape ที่ใช้เวลา
-  let idx = 0;
-  const workers = [];
-  const placeholderData = getPlaceholderPng();
-  for (let w = 0; w < CONCURRENT; w++) {
-    workers.push((async () => {
-      while (idx < unique.length) {
-        const url = unique[idx++];
-        const result = await preloadImage(url);
-        if (result === placeholderData && visitLookup) {
-          const visits = visitLookup[url] || [];
-          visits.forEach(v => failedVisits.push(v));
-        }
-        done++;
-        if (onProgress) onProgress(done, unique.length, failedVisits.length);
-      }
-    })());
+  const CONCURRENT = 6;
+  for (let i = 0; i < unique.length; i += CONCURRENT) {
+    const batch = unique.slice(i, i + CONCURRENT);
+    await Promise.all(batch.map(async url => {
+      await preloadImage(url);
+      done++;
+      if (onProgress) onProgress(done, unique.length);
+    }));
   }
-  await Promise.all(workers);
-}
-
-async function deleteFailedVisit(visitId) {
-  if (!confirm('ลบรายการเยี่ยมนี้?')) return;
-  try {
-    await firebaseDB.ref('visits/' + visitId).remove();
-    showToast('✓ ลบสำเร็จ');
-    const el = document.getElementById('fv-' + visitId);
-    if (el) el.innerHTML = '<div style="color:#0f6e56;padding:8px;">✓ ลบแล้ว</div>';
-  } catch (e) { alert('ลบไม่สำเร็จ: ' + e.message); }
 }
 
 function imgSrc(url) { return imageCache[url] || url; }
@@ -2104,27 +1933,16 @@ async function generatePDF() {
   btn.disabled = true;
   document.getElementById('rptResult').innerHTML = '';
   try {
-    // === STEP 1: Preload รูปทั้งหมด ===
+    // === STEP 1: Preload รูปทั้งหมดขนานกัน ===
     const allUrls = visits.map(v => v.photoUrl).filter(Boolean);
-    const visitLookup = {};
-    visits.forEach(v => {
-      if (!v.photoUrl) return;
-      if (!visitLookup[v.photoUrl]) visitLookup[v.photoUrl] = [];
-      visitLookup[v.photoUrl].push({ id: v.id, url: v.photoUrl, elderlyName: v.elderlyName, visitDate: v.visitDate });
-    });
     const totalImgs = new Set(allUrls).size;
-    const startTime = Date.now();
     document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป 0/${totalImgs}...</div>`;
-    btn.innerHTML = `⏳ โหลด 0/${totalImgs}`;
-    await preloadImagesParallel(allUrls, (done, total, failed) => {
+    btn.innerHTML = `⏳ โหลดรูป 0/${totalImgs}`;
+    await preloadImagesParallel(allUrls, (done, total) => {
       const pct = Math.round(done / total * 100);
-      const elapsed = Math.round((Date.now() - startTime) / 1000);
-      const eta = done > 0 ? Math.round(elapsed * (total - done) / done) : 0;
-      const failTxt = failed > 0 ? ` · <span style="color:#dc2626;font-weight:600;">${failed} เสีย</span>` : '';
-      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ โหลด ${done}/${total} (${pct}%)${failTxt}<br><small>ผ่าน ${elapsed}s · เหลือ ~${eta}s · (รูปเก่าจะ scrape จาก viewer page = ช้ากว่า)</small></div>`;
-      btn.innerHTML = `⏳ ${done}/${total}`;
-    }, visitLookup);
-    document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังสร้าง PDF...</div>`;
+      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป ${done}/${total} (${pct}%)...</div>`;
+      btn.innerHTML = `⏳ โหลดรูป ${done}/${total}`;
+    });
 
     // === STEP 2: สร้าง PDF ทีละหน้า (ใช้รูปที่ cache แล้ว เร็วมาก) ===
     const { jsPDF } = window.jspdf;
@@ -2138,15 +1956,16 @@ async function generatePDF() {
       document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังสร้างหน้า ${gi + 1}/${groupArr.length}...</div>`;
       btn.innerHTML = `⏳ สร้างหน้า ${gi + 1}/${groupArr.length}`;
       if (item.pdfMode === 'obt') {
-        const chunks = chunkArray(item.photos, 12);
+        // OBT MODE — adaptive, up to 20 photos/page
+        const chunks = chunkArray(item.photos, 20);
         for (const chunk of chunks) {
           if (pageIdx > 0) pdf.addPage();
           await renderObtPage(pdf, item, chunk, monthName, buddhistYear);
           pageIdx++;
         }
       } else {
-        // NORMAL MODE — Adaptive grid (up to 16 photos/page)
-        const MAX_PER_PAGE = 16;
+        // NORMAL MODE — Adaptive grid (up to 20 photos/page)
+        const MAX_PER_PAGE = 20;
         const chunks = chunkArray(item.photos, MAX_PER_PAGE);
         for (const chunk of chunks) {
           if (pageIdx > 0) pdf.addPage();
@@ -2160,26 +1979,7 @@ async function generatePDF() {
     const filename = `สรุปการเยี่ยม_${hospitalTag}_${monthName}${buddhistYear}${cgFilter ? '_' + (allCGs.find(c => c.code === cgFilter) || {}).name : ''}.pdf`;
     pdf.save(filename);
     document.getElementById('reportAlert').innerHTML = '';
-    let successMsg = `<div class="alert alert-success">✓ สำเร็จ — ${groupArr.length} คน, ${pageIdx} หน้า</div>`;
-    if (failedVisits.length > 0) {
-      const uniqVisits = {};
-      failedVisits.forEach(v => uniqVisits[v.id] = v);
-      const list = Object.values(uniqVisits);
-      successMsg += `<div class="alert alert-error" style="margin-top:10px;">
-        <strong>⚠️ มี ${list.length} รูปที่โหลดไม่ได้ (CDN เสีย + scrape ไม่สำเร็จ)</strong>
-        ${list.map(v => {
-          const dateStr = v.visitDate ? formatThaiDateShort(v.visitDate) : '-';
-          return `<div id="fv-${v.id}" style="background:white;padding:10px;border-radius:6px;margin-bottom:6px;border:1px solid #fecaca;">
-            <div style="font-weight:600;">${v.elderlyName || '-'} · ${dateStr}</div>
-            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
-              <a href="${v.url}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">🔗 เปิด URL</a>
-              <button class="btn btn-danger btn-sm" onclick="deleteFailedVisit('${v.id}')">🗑 ลบ</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
-    }
-    document.getElementById('rptResult').innerHTML = successMsg;
+    document.getElementById('rptResult').innerHTML = `<div class="alert alert-success">✓ สำเร็จ — ${groupArr.length} คน, ${pageIdx} หน้า</div>`;
     showToast('✓ ดาวน์โหลด PDF สำเร็จ');
   } catch (e) {
     document.getElementById('reportAlert').innerHTML = '<div class="alert alert-error">เกิดข้อผิดพลาด: ' + e.message + '</div>';
@@ -2188,34 +1988,41 @@ async function generatePDF() {
     btn.innerHTML = '📄 สร้าง PDF';
   }
 }
-// Adaptive grid for normal mode - fit page based on photo count
+// Adaptive grid for normal mode - รูปเต็มช่อง (object-fit:cover) + aspect ratio เลือกให้สวย
+// aspect: '4/3' = landscape look, '1/1' = square, '3/4' = portrait look
 function getGridConfig(n) {
-  // Returns { cols, rows, fontSize }
-  if (n <= 4) return { cols: 2, rows: 2, fontSize: 16 };
-  if (n <= 6) return { cols: 3, rows: 2, fontSize: 15 };
-  if (n <= 9) return { cols: 3, rows: 3, fontSize: 14 };
-  if (n <= 12) return { cols: 4, rows: 3, fontSize: 13 };
-  return { cols: 4, rows: 4, fontSize: 12 }; // 13-16
+  if (n <= 1)  return { cols: 1, rows: 1, aspect: '4/3', fontSize: 20, gap: 20, pad: 60 };
+  if (n <= 2)  return { cols: 2, rows: 1, aspect: '3/4', fontSize: 18, gap: 24, pad: 50 };
+  if (n <= 4)  return { cols: 2, rows: 2, aspect: '4/3', fontSize: 16, gap: 20, pad: 45 };
+  if (n <= 6)  return { cols: 3, rows: 2, aspect: '3/4', fontSize: 14, gap: 16, pad: 40 };
+  if (n <= 8)  return { cols: 4, rows: 2, aspect: '3/4', fontSize: 13, gap: 14, pad: 36 };
+  if (n <= 9)  return { cols: 3, rows: 3, aspect: '1/1', fontSize: 13, gap: 14, pad: 38 };
+  if (n <= 12) return { cols: 4, rows: 3, aspect: '3/4', fontSize: 12, gap: 12, pad: 34 };
+  if (n <= 16) return { cols: 4, rows: 4, aspect: '1/1', fontSize: 11, gap: 10, pad: 30 };
+  if (n <= 20) return { cols: 5, rows: 4, aspect: '3/4', fontSize: 10, gap: 9,  pad: 28 };
+  return { cols: 5, rows: Math.ceil(n / 5), aspect: '3/4', fontSize: 10, gap: 8, pad: 26 };
 }
 async function renderNormalPage(pdf, item, photos, monthName, buddhistYear) {
   const cfg = HOSPITALS[currentHospital];
-  const grid = getGridConfig(photos.length);
-  const gap = photos.length <= 4 ? 20 : (photos.length <= 9 ? 14 : 10);
-  const pad = photos.length <= 4 ? 50 : 40;
+  const n = photos.length;
+  const grid = getGridConfig(n);
+  const titleSize = n <= 2 ? 24 : (n <= 4 ? 22 : (n <= 9 ? 20 : 18));
+  const subSize   = n <= 2 ? 20 : (n <= 4 ? 19 : (n <= 9 ? 17 : 15));
+  const headGap   = n <= 4 ? 28 : (n <= 9 ? 22 : 16);
   const html = `
-    <div style="width:794px;padding:${pad}px ${pad}px 30px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;min-height:1123px;">
-      <div style="text-align:center;margin-bottom:${photos.length <= 4 ? 30 : 20}px;">
-        <div style="font-size:${photos.length <= 4 ? 22 : 20}px;font-weight:600;margin-bottom:6px;">ภาพกิจกรรมเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
-        <div style="font-size:${photos.length <= 4 ? 20 : 18}px;margin-bottom:6px;">ประจำเดือน ${monthName} ${buddhistYear}</div>
-        <div style="font-size:${photos.length <= 4 ? 20 : 18}px;">${item.elderlyName}${item.elderlyAge ? ' อายุ ' + item.elderlyAge + ' ปี' : ''}</div>
+    <div style="width:794px;padding:${grid.pad}px ${grid.pad}px 30px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;min-height:1123px;">
+      <div style="text-align:center;margin-bottom:${headGap}px;">
+        <div style="font-size:${titleSize}px;font-weight:600;margin-bottom:6px;">ภาพกิจกรรมเยี่ยมผู้สูงอายุที่มีภาวะพึ่งพิง</div>
+        <div style="font-size:${subSize}px;margin-bottom:6px;">ประจำเดือน ${monthName} ${buddhistYear}</div>
+        <div style="font-size:${subSize}px;">${item.elderlyName}${item.elderlyAge ? ' อายุ ' + item.elderlyAge + ' ปี' : ''}</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(${grid.cols},1fr);gap:${gap}px;">
+      <div style="display:grid;grid-template-columns:repeat(${grid.cols},1fr);gap:${grid.gap}px;">
         ${photos.map(p => `
           <div style="text-align:center;">
-            <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
-              <img src="${imgSrc(p.url)}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
+            <div style="width:100%;aspect-ratio:${grid.aspect};overflow:hidden;background:#f0f0f0;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+              <img src="${imgSrc(p.url)}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:block;">
             </div>
-            <div style="font-size:${grid.fontSize}px;margin-top:6px;">${formatThaiDateShort(p.date)}</div>
+            <div style="font-size:${grid.fontSize}px;margin-top:6px;color:#444;">${formatThaiDateShort(p.date)}</div>
           </div>
         `).join('')}
       </div>
@@ -2230,23 +2037,29 @@ async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
   const cfg = HOSPITALS[currentHospital];
   const dateStr = photos.map(p => new Date(p.date).getDate()).join(',');
   const n = photos.length;
-  let cols;
-  if (n <= 10) cols = 5;
-  else cols = 4; // 11-12
+  // adaptive layout: 1-4 → 2 cols, 5-6 → 3, 7-9 → 3, 10-12 → 4, 13-16 → 4, 17-20 → 5
+  let cols, aspect, fontSize, gap;
+  if (n <= 2)       { cols = 2; aspect = '4/3'; fontSize = 15; gap = 20; }
+  else if (n <= 4)  { cols = 2; aspect = '4/3'; fontSize = 14; gap = 16; }
+  else if (n <= 6)  { cols = 3; aspect = '3/4'; fontSize = 13; gap = 12; }
+  else if (n <= 9)  { cols = 3; aspect = '1/1'; fontSize = 13; gap = 10; }
+  else if (n <= 12) { cols = 4; aspect = '3/4'; fontSize = 12; gap = 10; }
+  else if (n <= 16) { cols = 4; aspect = '1/1'; fontSize = 11; gap = 8;  }
+  else              { cols = 5; aspect = '3/4'; fontSize = 10; gap = 8;  }
   const html = `
-    <div style="width:794px;padding:50px 50px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;">
+    <div style="width:794px;padding:40px 40px;font-family:Sarabun,sans-serif;background:white;box-sizing:border-box;">
       <div style="text-align:center;margin-bottom:18px;">
         <div style="font-size:22px;font-weight:600;margin-bottom:6px;">ภาพดูแลผู้สูงอายุที่มีภาวะพึ่งพิง</div>
         <div style="font-size:18px;margin-bottom:6px;">ประจำเดือน ${monthName} ${buddhistYear}</div>
         <div style="font-size:17px;">ชื่อ ${item.elderlyName} อายุ ${item.elderlyAge || '-'} ปี วันที่ ${dateStr} ${monthName} ${buddhistYear}</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:10px;">
+      <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${gap}px;">
         ${photos.map(p => `
           <div style="text-align:center;">
-            <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
-              <img src="${imgSrc(p.url)}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
+            <div style="width:100%;aspect-ratio:${aspect};overflow:hidden;background:#f0f0f0;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+              <img src="${imgSrc(p.url)}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:block;">
             </div>
-            <div style="font-size:13px;margin-top:4px;">${new Date(p.date).getDate()} ${THAI_MONTHS_SHORT[new Date(p.date).getMonth()+1]}</div>
+            <div style="font-size:${fontSize}px;margin-top:4px;color:#444;">${new Date(p.date).getDate()} ${THAI_MONTHS_SHORT[new Date(p.date).getMonth()+1]}</div>
           </div>
         `).join('')}
       </div>

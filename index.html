@@ -1828,8 +1828,8 @@ async function saveAddSingleVisit() {
 // ============================================
 const imageCache = {}; // url → dataURL (base64)
 
-// IndexedDB V4 (เปลี่ยนเพื่อ clear cache เก่า)
-const DB_NAME = 'visitPhotoCacheV4';
+// IndexedDB V5
+const DB_NAME = 'visitPhotoCacheV5';
 const DB_STORE = 'photos';
 let _db = null;
 function openDB() {
@@ -1894,7 +1894,6 @@ function getPlaceholderPng() {
   return _placeholderPng;
 }
 
-// 🔑 CORS proxy — ใช้เมื่อ ImgBB ไม่ส่ง CORS header
 const CORS_PROXIES = [
   'https://corsproxy.io/?url=',
   'https://api.allorigins.win/raw?url=',
@@ -1909,7 +1908,7 @@ async function _rawFetch(url, timeoutMs) {
     clearTimeout(timer);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const blob = await res.blob();
-    if (blob.size < 1500) throw new Error('too small: ' + blob.size);
+    if (blob.size < 1500) throw new Error('too small');
     if (!blob.type.startsWith('image/')) throw new Error('not image');
     const dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1918,24 +1917,69 @@ async function _rawFetch(url, timeoutMs) {
       reader.readAsDataURL(blob);
     });
     const valid = await validateDataUrl(dataUrl);
-    if (!valid) throw new Error('invalid image');
+    if (!valid) throw new Error('invalid');
     return dataUrl;
   } finally { clearTimeout(timer); }
 }
 
+async function _fetchHtml(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.text();
+  } finally { clearTimeout(timer); }
+}
+
+// 🔑 กู้ URL ใหม่จาก viewer page ของ ImgBB
+async function recoverImgbbUrl(deadUrl) {
+  // Extract id from: i.ibb.co/{id}/{filename}.jpg
+  const match = deadUrl.match(/i\.ibb\.co\/([^/]+)\//);
+  if (!match) return null;
+  const id = match[1];
+  const viewerUrl = `https://ibb.co/${id}`;
+  // ลอง scrape ผ่าน CORS proxy ทีละตัว
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const html = await _fetchHtml(proxy + encodeURIComponent(viewerUrl), 15000);
+      // หา og:image meta tag
+      let m = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
+      if (!m) m = html.match(/<link\s+rel="image_src"\s+href="([^"]+)"/i);
+      if (!m) m = html.match(/<img[^>]+id="image-viewer-container[^"]*"[^>]+src="([^"]+)"/i);
+      // regex หา direct URL ของ i.ibb.co
+      if (!m) m = html.match(/https:\/\/i\.ibb\.co\/[^"'\s]+\.(?:jpg|jpeg|png|gif|webp)/i);
+      if (m) {
+        const newUrl = m[1] || m[0];
+        if (newUrl && newUrl !== deadUrl && newUrl.startsWith('http')) {
+          console.log('[recover]', deadUrl.substr(-30), '→', newUrl.substr(-30));
+          return newUrl;
+        }
+      }
+    } catch (e) { /* ลอง proxy ถัดไป */ }
+  }
+  return null;
+}
+
 async function fetchImageOnce(url, timeoutMs) {
   // 1. ลองดึงตรงก่อน
-  try {
-    return await _rawFetch(url, timeoutMs);
-  } catch (e) {
-    // 2. ถ้า fail (น่าจะ CORS) → ลอง proxy ทีละตัว
-    for (const proxy of CORS_PROXIES) {
-      try {
-        return await _rawFetch(proxy + encodeURIComponent(url), timeoutMs);
-      } catch (ee) { /* ลอง proxy ถัดไป */ }
-    }
-    throw e;
+  try { return await _rawFetch(url, timeoutMs); } catch (e) {}
+  // 2. ลอง CORS proxy
+  for (const proxy of CORS_PROXIES) {
+    try { return await _rawFetch(proxy + encodeURIComponent(url), timeoutMs); } catch (e) {}
   }
+  // 3. 🔑 ลอง recover URL ใหม่จาก viewer page
+  const newUrl = await recoverImgbbUrl(url);
+  if (newUrl) {
+    // ลอง direct ก่อน
+    try { return await _rawFetch(newUrl, timeoutMs); } catch (e) {}
+    // ลอง proxy
+    for (const proxy of CORS_PROXIES) {
+      try { return await _rawFetch(proxy + encodeURIComponent(newUrl), timeoutMs); } catch (e) {}
+    }
+  }
+  throw new Error('all methods failed');
 }
 
 async function fetchImageViaTag(url, timeoutMs) {
@@ -1967,7 +2011,7 @@ async function preloadImage(url) {
     const valid = await validateDataUrl(cached);
     if (valid) { imageCache[url] = cached; return cached; }
   }
-  // Timeouts: 10s, 20s, 30s
+  // ลอง 3 ครั้ง (ครั้งที่ 3 จะ scrape viewer page)
   const timeouts = [10000, 20000, 30000];
   for (let attempt = 0; attempt < timeouts.length; attempt++) {
     try {
@@ -1993,7 +2037,7 @@ async function preloadImagesParallel(urls, onProgress, visitLookup) {
   failedVisits = [];
   const unique = [...new Set(urls)];
   let done = 0;
-  const CONCURRENT = 6;
+  const CONCURRENT = 4; // ลดลงเพราะมี scrape ที่ใช้เวลา
   let idx = 0;
   const workers = [];
   const placeholderData = getPlaceholderPng();
@@ -2077,7 +2121,7 @@ async function generatePDF() {
       const elapsed = Math.round((Date.now() - startTime) / 1000);
       const eta = done > 0 ? Math.round(elapsed * (total - done) / done) : 0;
       const failTxt = failed > 0 ? ` · <span style="color:#dc2626;font-weight:600;">${failed} เสีย</span>` : '';
-      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ โหลด ${done}/${total} (${pct}%)${failTxt}<br><small>ผ่าน ${elapsed}s · เหลือ ~${eta}s</small></div>`;
+      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ โหลด ${done}/${total} (${pct}%)${failTxt}<br><small>ผ่าน ${elapsed}s · เหลือ ~${eta}s · (รูปเก่าจะ scrape จาก viewer page = ช้ากว่า)</small></div>`;
       btn.innerHTML = `⏳ ${done}/${total}`;
     }, visitLookup);
     document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังสร้าง PDF...</div>`;
@@ -2122,8 +2166,7 @@ async function generatePDF() {
       failedVisits.forEach(v => uniqVisits[v.id] = v);
       const list = Object.values(uniqVisits);
       successMsg += `<div class="alert alert-error" style="margin-top:10px;">
-        <strong>⚠️ มี ${list.length} รูปที่โหลดไม่ได้</strong>
-        <div style="margin:8px 0;font-size:13px;">💡 กด "เปิด URL" ตรวจ — ถ้าเปิดได้ปกติ แสดงว่าแค่ CORS block ลองสร้าง PDF ซ้ำดู</div>
+        <strong>⚠️ มี ${list.length} รูปที่โหลดไม่ได้ (CDN เสีย + scrape ไม่สำเร็จ)</strong>
         ${list.map(v => {
           const dateStr = v.visitDate ? formatThaiDateShort(v.visitDate) : '-';
           return `<div id="fv-${v.id}" style="background:white;padding:10px;border-radius:6px;margin-bottom:6px;border:1px solid #fecaca;">

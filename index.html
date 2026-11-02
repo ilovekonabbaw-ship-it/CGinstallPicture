@@ -1828,8 +1828,8 @@ async function saveAddSingleVisit() {
 // ============================================
 const imageCache = {}; // url → dataURL (base64)
 
-// IndexedDB V3
-const DB_NAME = 'visitPhotoCacheV3';
+// IndexedDB V4 (เปลี่ยนเพื่อ clear cache เก่า)
+const DB_NAME = 'visitPhotoCacheV4';
 const DB_STORE = 'photos';
 let _db = null;
 function openDB() {
@@ -1858,17 +1858,6 @@ async function dbSet(key, value) {
     return new Promise((resolve) => {
       const tx = db.transaction(DB_STORE, 'readwrite');
       tx.objectStore(DB_STORE).put(value, key);
-      tx.oncomplete = () => resolve(true);
-      tx.onerror = () => resolve(false);
-    });
-  } catch (e) { return false; }
-}
-async function dbDelete(key) {
-  try {
-    const db = await openDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(DB_STORE, 'readwrite');
-      tx.objectStore(DB_STORE).delete(key);
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => resolve(false);
     });
@@ -1905,15 +1894,22 @@ function getPlaceholderPng() {
   return _placeholderPng;
 }
 
-async function fetchImageOnce(url, timeoutMs) {
+// 🔑 CORS proxy — ใช้เมื่อ ImgBB ไม่ส่ง CORS header
+const CORS_PROXIES = [
+  'https://corsproxy.io/?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://api.codetabs.com/v1/proxy?quest='
+];
+
+async function _rawFetch(url, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: controller.signal, mode: 'cors', cache: 'default' });
+    const res = await fetch(url, { signal: controller.signal, mode: 'cors' });
     clearTimeout(timer);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const blob = await res.blob();
-    if (blob.size < 3000) throw new Error('blob too small');
+    if (blob.size < 1500) throw new Error('too small: ' + blob.size);
     if (!blob.type.startsWith('image/')) throw new Error('not image');
     const dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1925,6 +1921,21 @@ async function fetchImageOnce(url, timeoutMs) {
     if (!valid) throw new Error('invalid image');
     return dataUrl;
   } finally { clearTimeout(timer); }
+}
+
+async function fetchImageOnce(url, timeoutMs) {
+  // 1. ลองดึงตรงก่อน
+  try {
+    return await _rawFetch(url, timeoutMs);
+  } catch (e) {
+    // 2. ถ้า fail (น่าจะ CORS) → ลอง proxy ทีละตัว
+    for (const proxy of CORS_PROXIES) {
+      try {
+        return await _rawFetch(proxy + encodeURIComponent(url), timeoutMs);
+      } catch (ee) { /* ลอง proxy ถัดไป */ }
+    }
+    throw e;
+  }
 }
 
 async function fetchImageViaTag(url, timeoutMs) {
@@ -1955,10 +1966,9 @@ async function preloadImage(url) {
   if (cached && cached.length > 3000) {
     const valid = await validateDataUrl(cached);
     if (valid) { imageCache[url] = cached; return cached; }
-    else await dbDelete(url);
   }
-  // 🚀 Adaptive timeout: 10s → 20s → 45s (ImgBB Pro เร็ว ใช้สั้นได้)
-  const timeouts = [10000, 20000, 45000];
+  // Timeouts: 10s, 20s, 30s
+  const timeouts = [10000, 20000, 30000];
   for (let attempt = 0; attempt < timeouts.length; attempt++) {
     try {
       const dataUrl = await fetchImageOnce(url, timeouts[attempt]);
@@ -1979,12 +1989,11 @@ async function preloadImage(url) {
   return imageCache[url];
 }
 
-// 🚀🚀 เร็วสุด: 8 workers, no delay (เหมาะกับ ImgBB Pro)
 async function preloadImagesParallel(urls, onProgress, visitLookup) {
   failedVisits = [];
   const unique = [...new Set(urls)];
   let done = 0;
-  const CONCURRENT = 8; // Pro รับได้มากขึ้น
+  const CONCURRENT = 6;
   let idx = 0;
   const workers = [];
   const placeholderData = getPlaceholderPng();
@@ -2011,7 +2020,7 @@ async function deleteFailedVisit(visitId) {
     await firebaseDB.ref('visits/' + visitId).remove();
     showToast('✓ ลบสำเร็จ');
     const el = document.getElementById('fv-' + visitId);
-    if (el) el.innerHTML = '<div style="color:#0f6e56;padding:8px;">✓ ลบแล้ว ไปแท็บ "บันทึกการเยี่ยม" เพื่ออัปโหลดใหม่</div>';
+    if (el) el.innerHTML = '<div style="color:#0f6e56;padding:8px;">✓ ลบแล้ว</div>';
   } catch (e) { alert('ลบไม่สำเร็จ: ' + e.message); }
 }
 
@@ -2068,8 +2077,8 @@ async function generatePDF() {
       const elapsed = Math.round((Date.now() - startTime) / 1000);
       const eta = done > 0 ? Math.round(elapsed * (total - done) / done) : 0;
       const failTxt = failed > 0 ? ` · <span style="color:#dc2626;font-weight:600;">${failed} เสีย</span>` : '';
-      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ โหลดรูป ${done}/${total} (${pct}%)${failTxt}<br><small>ผ่านไป ${elapsed}s · เหลืออีก ~${eta}s</small></div>`;
-      btn.innerHTML = `⏳ โหลด ${done}/${total}`;
+      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ โหลด ${done}/${total} (${pct}%)${failTxt}<br><small>ผ่าน ${elapsed}s · เหลือ ~${eta}s</small></div>`;
+      btn.innerHTML = `⏳ ${done}/${total}`;
     }, visitLookup);
     document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังสร้าง PDF...</div>`;
 
@@ -2113,8 +2122,8 @@ async function generatePDF() {
       failedVisits.forEach(v => uniqVisits[v.id] = v);
       const list = Object.values(uniqVisits);
       successMsg += `<div class="alert alert-error" style="margin-top:10px;">
-        <strong>⚠️ มี ${list.length} รูปที่ ImgBB เสีย</strong>
-        <div style="margin:8px 0;font-size:13px;">💡 กด "เปิด URL" ตรวจ — ถ้าเสียจริง กด "ลบ" แล้วไปบันทึกใหม่</div>
+        <strong>⚠️ มี ${list.length} รูปที่โหลดไม่ได้</strong>
+        <div style="margin:8px 0;font-size:13px;">💡 กด "เปิด URL" ตรวจ — ถ้าเปิดได้ปกติ แสดงว่าแค่ CORS block ลองสร้าง PDF ซ้ำดู</div>
         ${list.map(v => {
           const dateStr = v.visitDate ? formatThaiDateShort(v.visitDate) : '-';
           return `<div id="fv-${v.id}" style="background:white;padding:10px;border-radius:6px;margin-bottom:6px;border:1px solid #fecaca;">

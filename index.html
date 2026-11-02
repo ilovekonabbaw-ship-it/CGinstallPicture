@@ -1828,7 +1828,45 @@ async function saveAddSingleVisit() {
 // ============================================
 const imageCache = {}; // url → dataURL (base64)
 
-// ดึงรูป 1 ครั้ง (fetch → blob → data URL)
+// ============================================
+// INDEXED DB CACHE — เก็บรูปถาวร ข้าม session ได้
+// ============================================
+const DB_NAME = 'visitPhotoCache';
+const DB_STORE = 'photos';
+let _db = null;
+function openDB() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
+    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+async function dbGet(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, 'readonly');
+      const req = tx.objectStore(DB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (e) { return null; }
+}
+async function dbSet(key, value) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      tx.objectStore(DB_STORE).put(value, key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    });
+  } catch (e) { return false; }
+}
+
+// ดึงรูป 1 ครั้ง
 async function fetchImageOnce(url, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -1847,7 +1885,7 @@ async function fetchImageOnce(url, timeoutMs) {
   } finally { clearTimeout(timer); }
 }
 
-// Fallback: ใช้ <img> tag (บางครั้ง bypass CORS ได้)
+// Fallback: ใช้ <img> tag
 async function fetchImageViaTag(url, timeoutMs) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -1868,34 +1906,47 @@ async function fetchImageViaTag(url, timeoutMs) {
   });
 }
 
+// Track failed images สำหรับแจ้งผู้ใช้
+let failedImages = [];
+
 async function preloadImage(url) {
   if (imageCache[url]) return imageCache[url];
-  // Retry 5 ครั้ง — รอ 2, 4, 6, 8 วิ ก่อน retry (เพิ่มขึ้นเรื่อยๆ)
+  // ลอง IndexedDB ก่อน — รูปที่เคยโหลดสำเร็จแล้ว ไม่ต้องโหลดใหม่
+  const cached = await dbGet(url);
+  if (cached) {
+    imageCache[url] = cached;
+    return cached;
+  }
+  // ไม่มี cache → Retry 5 ครั้ง (fetch)
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      const dataUrl = await fetchImageOnce(url, 60000); // timeout 60s
+      const dataUrl = await fetchImageOnce(url, 60000);
       imageCache[url] = dataUrl;
+      await dbSet(url, dataUrl); // บันทึก cache ถาวร
       return dataUrl;
     } catch (e) {
       if (attempt < 5) await new Promise(r => setTimeout(r, 2000 * attempt));
     }
   }
-  // Fallback: ลองโหลดผ่าน <img> tag
+  // Fallback: ใช้ <img> tag
   try {
     const dataUrl = await fetchImageViaTag(url, 45000);
     imageCache[url] = dataUrl;
+    await dbSet(url, dataUrl);
     return dataUrl;
   } catch (e) { /* fail สุด */ }
-  imageCache[url] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#f3f4f6"/><text x="150" y="140" font-size="14" fill="#999" text-anchor="middle" font-family="sans-serif">รูปโหลดไม่สำเร็จ</text><text x="150" y="165" font-size="12" fill="#aaa" text-anchor="middle" font-family="sans-serif">(ImgBB ไม่ตอบ ลองใหม่อีกครั้ง)</text></svg>');
+  // Fail — เก็บไว้แจ้งผู้ใช้
+  failedImages.push(url);
+  imageCache[url] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#f3f4f6"/><text x="150" y="140" font-size="14" fill="#999" text-anchor="middle" font-family="sans-serif">รูปโหลดไม่สำเร็จ</text><text x="150" y="165" font-size="12" fill="#aaa" text-anchor="middle" font-family="sans-serif">(ImgBB ไม่ตอบ ลองสร้าง PDF ใหม่)</text></svg>');
   return imageCache[url];
 }
 
-// Worker pool — คนงาน 2 คน + หน่วง 500ms ระหว่างรูป เพื่อไม่กระหน่ำ ImgBB
 async function preloadImagesParallel(urls, onProgress) {
+  failedImages = []; // reset
   const unique = [...new Set(urls)];
   let done = 0;
-  const CONCURRENT = 2; // ไม่กระหน่ำ ImgBB (บริการฟรีมี rate limit)
-  const DELAY_MS = 500; // หน่วงระหว่างรูป
+  const CONCURRENT = 2;
+  const DELAY_MS = 500;
   let idx = 0;
   const workers = [];
   for (let w = 0; w < CONCURRENT; w++) {
@@ -1904,7 +1955,7 @@ async function preloadImagesParallel(urls, onProgress) {
         const url = unique[idx++];
         await preloadImage(url);
         done++;
-        if (onProgress) onProgress(done, unique.length);
+        if (onProgress) onProgress(done, unique.length, failedImages.length);
         await new Promise(r => setTimeout(r, DELAY_MS));
       }
     })());
@@ -1951,11 +2002,12 @@ async function generatePDF() {
     // === STEP 1: Preload รูปทั้งหมดขนานกัน ===
     const allUrls = visits.map(v => v.photoUrl).filter(Boolean);
     const totalImgs = new Set(allUrls).size;
-    document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป 0/${totalImgs}...</div>`;
+    document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป 0/${totalImgs}... (รูปที่เคยโหลดแล้วจะเร็วมาก)</div>`;
     btn.innerHTML = `⏳ โหลดรูป 0/${totalImgs}`;
-    await preloadImagesParallel(allUrls, (done, total) => {
+    await preloadImagesParallel(allUrls, (done, total, failed) => {
       const pct = Math.round(done / total * 100);
-      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป ${done}/${total} (${pct}%)...</div>`;
+      const failTxt = failed > 0 ? ` · <span style="color:#dc2626;">${failed} รูปโหลดไม่ได้</span>` : '';
+      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป ${done}/${total} (${pct}%)${failTxt}</div>`;
       btn.innerHTML = `⏳ โหลดรูป ${done}/${total}`;
     });
 
@@ -1993,7 +2045,11 @@ async function generatePDF() {
     const filename = `สรุปการเยี่ยม_${hospitalTag}_${monthName}${buddhistYear}${cgFilter ? '_' + (allCGs.find(c => c.code === cgFilter) || {}).name : ''}.pdf`;
     pdf.save(filename);
     document.getElementById('reportAlert').innerHTML = '';
-    document.getElementById('rptResult').innerHTML = `<div class="alert alert-success">✓ สำเร็จ — ${groupArr.length} คน, ${pageIdx} หน้า</div>`;
+    let successMsg = `✓ สำเร็จ — ${groupArr.length} คน, ${pageIdx} หน้า`;
+    if (failedImages.length > 0) {
+      successMsg += ` <br><small style="color:#dc2626;">⚠️ มี ${failedImages.length} รูปที่ ImgBB ไม่ตอบ — กด "สร้าง PDF" อีกครั้งเพื่อลองโหลดรูปที่หาย (รูปอื่นจะใช้ cache เร็วมาก)</small>`;
+    }
+    document.getElementById('rptResult').innerHTML = `<div class="alert alert-success">${successMsg}</div>`;
     showToast('✓ ดาวน์โหลด PDF สำเร็จ');
   } catch (e) {
     document.getElementById('reportAlert').innerHTML = '<div class="alert alert-error">เกิดข้อผิดพลาด: ' + e.message + '</div>';

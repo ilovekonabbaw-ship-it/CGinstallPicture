@@ -1823,6 +1823,50 @@ async function saveAddSingleVisit() {
 // ============================================
 // PDF GENERATION (with adaptive grid)
 // ============================================
+// ============================================
+// IMAGE PRELOAD CACHE — โหลดรูปทั้งหมดขนานกัน แล้วแปลงเป็น data URL
+// ============================================
+const imageCache = {}; // url → dataURL (base64)
+
+async function preloadImage(url, timeoutMs = 20000) {
+  if (imageCache[url]) return imageCache[url];
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, { signal: controller.signal, mode: 'cors' });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('read fail'));
+      reader.readAsDataURL(blob);
+    });
+    imageCache[url] = dataUrl;
+    return dataUrl;
+  } catch (e) {
+    imageCache[url] = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#f3f4f6"/><text x="150" y="140" font-size="14" fill="#999" text-anchor="middle" font-family="sans-serif">รูปโหลดไม่สำเร็จ</text><text x="150" y="165" font-size="12" fill="#aaa" text-anchor="middle" font-family="sans-serif">(โหลดนานเกินไป)</text></svg>');
+    return imageCache[url];
+  }
+}
+
+async function preloadImagesParallel(urls, onProgress) {
+  const unique = [...new Set(urls)];
+  let done = 0;
+  const CONCURRENT = 6;
+  for (let i = 0; i < unique.length; i += CONCURRENT) {
+    const batch = unique.slice(i, i + CONCURRENT);
+    await Promise.all(batch.map(async url => {
+      await preloadImage(url);
+      done++;
+      if (onProgress) onProgress(done, unique.length);
+    }));
+  }
+}
+
+function imgSrc(url) { return imageCache[url] || url; }
+
 async function generatePDF() {
   const month = parseInt(document.getElementById('rptMonth').value);
   const year = parseInt(document.getElementById('rptYear').value);
@@ -1855,9 +1899,20 @@ async function generatePDF() {
   Object.values(grouped).forEach(g => g.photos.sort((a, b) => new Date(a.date) - new Date(b.date)));
   const btn = document.getElementById('rptBtn');
   btn.disabled = true;
-  document.getElementById('reportAlert').innerHTML = '<div class="alert alert-warning">⏳ กำลังสร้าง PDF...</div>';
   document.getElementById('rptResult').innerHTML = '';
   try {
+    // === STEP 1: Preload รูปทั้งหมดขนานกัน ===
+    const allUrls = visits.map(v => v.photoUrl).filter(Boolean);
+    const totalImgs = new Set(allUrls).size;
+    document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป 0/${totalImgs}...</div>`;
+    btn.innerHTML = `⏳ โหลดรูป 0/${totalImgs}`;
+    await preloadImagesParallel(allUrls, (done, total) => {
+      const pct = Math.round(done / total * 100);
+      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังโหลดรูป ${done}/${total} (${pct}%)...</div>`;
+      btn.innerHTML = `⏳ โหลดรูป ${done}/${total}`;
+    });
+
+    // === STEP 2: สร้าง PDF ทีละหน้า (ใช้รูปที่ cache แล้ว เร็วมาก) ===
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const monthName = THAI_MONTHS[month];
@@ -1866,7 +1921,8 @@ async function generatePDF() {
     const groupArr = Object.values(grouped);
     for (let gi = 0; gi < groupArr.length; gi++) {
       const item = groupArr[gi];
-      btn.innerHTML = `⏳ หน้า ${gi + 1}/${groupArr.length}`;
+      document.getElementById('reportAlert').innerHTML = `<div class="alert alert-warning">⏳ กำลังสร้างหน้า ${gi + 1}/${groupArr.length}...</div>`;
+      btn.innerHTML = `⏳ สร้างหน้า ${gi + 1}/${groupArr.length}`;
       if (item.pdfMode === 'obt') {
         const chunks = chunkArray(item.photos, 12);
         for (const chunk of chunks) {
@@ -1924,7 +1980,7 @@ async function renderNormalPage(pdf, item, photos, monthName, buddhistYear) {
         ${photos.map(p => `
           <div style="text-align:center;">
             <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
-              <img src="${p.url}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
+              <img src="${imgSrc(p.url)}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
             </div>
             <div style="font-size:${grid.fontSize}px;margin-top:6px;">${formatThaiDateShort(p.date)}</div>
           </div>
@@ -1955,7 +2011,7 @@ async function renderObtPage(pdf, item, photos, monthName, buddhistYear) {
         ${photos.map(p => `
           <div style="text-align:center;">
             <div style="width:100%;aspect-ratio:1;border:1px solid #ddd;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
-              <img src="${p.url}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
+              <img src="${imgSrc(p.url)}" crossorigin="anonymous" style="max-width:100%;max-height:100%;object-fit:contain;">
             </div>
             <div style="font-size:13px;margin-top:4px;">${new Date(p.date).getDate()} ${THAI_MONTHS_SHORT[new Date(p.date).getMonth()+1]}</div>
           </div>
@@ -1972,11 +2028,21 @@ async function renderHtmlToPdfPage(pdf, html) {
   const container = document.getElementById('pdfRender');
   container.innerHTML = html;
   const imgs = container.querySelectorAll('img');
-  await Promise.all(Array.from(imgs).map(img => {
-    if (img.complete) return Promise.resolve();
-    return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+  await Promise.all(Array.from(imgs).map(async img => {
+    try {
+      if (img.decode) {
+        await img.decode();
+      } else {
+        if (img.complete && img.naturalWidth > 0) return;
+        await new Promise(resolve => {
+          const timer = setTimeout(resolve, 10000);
+          img.onload = () => { clearTimeout(timer); resolve(); };
+          img.onerror = () => { clearTimeout(timer); resolve(); };
+        });
+      }
+    } catch (e) { /* ignore — ใช้ placeholder ที่ cache ไว้ */ }
   }));
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 150));
   const canvas = await html2canvas(container.firstElementChild, {
     scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false
   });

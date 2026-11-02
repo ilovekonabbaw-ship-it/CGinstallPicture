@@ -1828,7 +1828,7 @@ async function saveAddSingleVisit() {
 // ============================================
 const imageCache = {}; // url → dataURL (base64)
 
-// พยายามดึงรูป 1 ครั้ง (fetch → blob → data URL)
+// ดึงรูป 1 ครั้ง (fetch → blob → data URL)
 async function fetchImageOnce(url, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -1844,12 +1844,10 @@ async function fetchImageOnce(url, timeoutMs) {
       reader.onerror = () => reject(new Error('read fail'));
       reader.readAsDataURL(blob);
     });
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally { clearTimeout(timer); }
 }
 
-// Fallback: ใช้ <img> tag (bypass CORS บางกรณี)
+// Fallback: ใช้ <img> tag (บางครั้ง bypass CORS ได้)
 async function fetchImageViaTag(url, timeoutMs) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -1872,31 +1870,32 @@ async function fetchImageViaTag(url, timeoutMs) {
 
 async function preloadImage(url) {
   if (imageCache[url]) return imageCache[url];
-  // ลอง 3 ครั้ง — รอ 1.5 วิ ก่อน retry
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  // Retry 5 ครั้ง — รอ 2, 4, 6, 8 วิ ก่อน retry (เพิ่มขึ้นเรื่อยๆ)
+  for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      const dataUrl = await fetchImageOnce(url, 45000);
+      const dataUrl = await fetchImageOnce(url, 60000); // timeout 60s
       imageCache[url] = dataUrl;
       return dataUrl;
     } catch (e) {
-      if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+      if (attempt < 5) await new Promise(r => setTimeout(r, 2000 * attempt));
     }
   }
-  // Fallback: ใช้ <img> tag
+  // Fallback: ลองโหลดผ่าน <img> tag
   try {
-    const dataUrl = await fetchImageViaTag(url, 30000);
+    const dataUrl = await fetchImageViaTag(url, 45000);
     imageCache[url] = dataUrl;
     return dataUrl;
-  } catch (e) { /* ล้มเหลวสุด → placeholder */ }
-  imageCache[url] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#f3f4f6"/><text x="150" y="140" font-size="14" fill="#999" text-anchor="middle" font-family="sans-serif">รูปโหลดไม่สำเร็จ</text><text x="150" y="165" font-size="12" fill="#aaa" text-anchor="middle" font-family="sans-serif">(ลองใหม่หรือตรวจเน็ต)</text></svg>');
+  } catch (e) { /* fail สุด */ }
+  imageCache[url] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#f3f4f6"/><text x="150" y="140" font-size="14" fill="#999" text-anchor="middle" font-family="sans-serif">รูปโหลดไม่สำเร็จ</text><text x="150" y="165" font-size="12" fill="#aaa" text-anchor="middle" font-family="sans-serif">(ImgBB ไม่ตอบ ลองใหม่อีกครั้ง)</text></svg>');
   return imageCache[url];
 }
 
-// Worker pool — คนงาน 4 คน ดึงรูปจาก queue พร้อมกัน
+// Worker pool — คนงาน 2 คน + หน่วง 500ms ระหว่างรูป เพื่อไม่กระหน่ำ ImgBB
 async function preloadImagesParallel(urls, onProgress) {
   const unique = [...new Set(urls)];
   let done = 0;
-  const CONCURRENT = 4;
+  const CONCURRENT = 2; // ไม่กระหน่ำ ImgBB (บริการฟรีมี rate limit)
+  const DELAY_MS = 500; // หน่วงระหว่างรูป
   let idx = 0;
   const workers = [];
   for (let w = 0; w < CONCURRENT; w++) {
@@ -1906,6 +1905,7 @@ async function preloadImagesParallel(urls, onProgress) {
         await preloadImage(url);
         done++;
         if (onProgress) onProgress(done, unique.length);
+        await new Promise(r => setTimeout(r, DELAY_MS));
       }
     })());
   }
